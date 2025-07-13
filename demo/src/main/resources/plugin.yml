@@ -1,0 +1,8 @@
+name: WildDuel
+version: 1.0
+main: com.wildduel.WildDuel
+api-version: 1.21
+commands:
+  wd:
+    description: Wild Duel command.
+    usage: /wd <set|sp|start|ts>

@@ -1,0 +1,6 @@
+com\wildduel\WildDuel.class
+com\wildduel\GameManager.class
+com\wildduel\GameManager$1.class
+com\wildduel\WildDuelCommand.class
+com\wildduel\GameState.class
+com\wildduel\PlayerEventListener.class

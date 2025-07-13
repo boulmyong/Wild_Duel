@@ -1,0 +1,374 @@
+--- pom.xml ---
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.wildduel</groupId>
+    <artifactId>wildduel</artifactId>
+    <version>1.0-SNAPSHOT</version>
+    <packaging>jar</packaging>
+
+    <name>WildDuel</name>
+
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <maven.compiler.source>17</maven.compiler.source>
+        <maven.compiler.target>17</maven.compiler.target>
+    </properties>
+
+    <repositories>
+        <repository>
+            <id>spigotmc-repo</id>
+            <url>https://hub.spigotmc.org/nexus/content/repositories/snapshots/</url>
+        </repository>
+    </repositories>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.spigotmc</groupId>
+            <artifactId>spigot-api</artifactId>
+            <version>1.21-R0.1-SNAPSHOT</version>
+            <scope>provided</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <defaultGoal>clean package</defaultGoal>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.8.1</version>
+                <configuration>
+                    <source>${maven.compiler.source}</source>
+                    <target>${maven.compiler.target}</target>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <version>3.2.0</version>
+                <configuration>
+                    <outputDirectory>../target</outputDirectory>
+                </configuration>
+            </plugin>
+        </plugins>
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>true</filtering>
+            </resource>
+        </resources>
+    </build>
+</project>
+
+--- plugin.yml ---
+name: WildDuel
+version: 1.0
+main: com.wildduel.WildDuel
+api-version: 1.21
+commands:
+  wd:
+    description: Wild Duel command.
+    usage: /wd <set|sp|start|ts>
+
+--- WildDuel.java ---
+package com.wildduel;
+
+import org.bukkit.plugin.java.JavaPlugin;
+
+public class WildDuel extends JavaPlugin {
+
+    private static WildDuel instance;
+    private GameManager gameManager;
+
+    @Override
+    public void onEnable() {
+        instance = this;
+        gameManager = new GameManager();
+        getCommand("wd").setExecutor(new WildDuelCommand(gameManager));
+        getServer().getPluginManager().registerEvents(new PlayerEventListener(gameManager), this);
+        getLogger().info("WildDuel plugin enabled!");
+    }
+
+    @Override
+    public void onDisable() {
+        getLogger().info("WildDuel plugin disabled!");
+    }
+
+    public static WildDuel getInstance() {
+        return instance;
+    }
+
+    public GameManager getGameManager() {
+        return gameManager;
+    }
+}
+
+--- GameManager.java ---
+package com.wildduel;
+
+import org.bukkit.*;
+import org.bukkit.boss.BarColor;
+import org.bukkit.boss.BarStyle;
+import org.bukkit.boss.BossBar;
+import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.potion.PotionEffect;
+import org.bukkit.potion.PotionEffectType;
+import org.bukkit.scheduler.BukkitRunnable;
+import org.bukkit.scoreboard.Scoreboard;
+import org.bukkit.scoreboard.Team;
+
+import java.util.Objects;
+
+public class GameManager {
+
+    private GameState gameState = GameState.LOBBY;
+    private Location lobbySpawn;
+    private Location worldSpawn;
+    private BossBar timerBar;
+    private int prepTimeSeconds = 900; // 15 minutes
+    private BukkitRunnable gameTask;
+
+    public void setLobby(Location location) {
+        if (gameState != GameState.LOBBY) {
+            // Handle error: Game already in progress
+            return;
+        }
+        this.lobbySpawn = location;
+        World world = location.getWorld();
+        if (world != null) {
+            world.setSpawnLocation(lobbySpawn);
+        }
+
+        for (Player player : Bukkit.getOnlinePlayers()) {
+            Bukkit.getScheduler().runTask(WildDuel.getInstance(), () -> {
+                player.teleport(lobbySpawn);
+                player.addPotionEffect(new PotionEffect(PotionEffectType.SATURATION, Integer.MAX_VALUE, 0, false, false));
+                WildDuel.getInstance().getLogger().info("Teleported " + player.getName() + " to lobby.");
+            });
+        }
+        gameState = GameState.PREPARING;
+    }
+
+    public void setWorldSpawn(Location location) {
+        this.worldSpawn = location;
+    }
+
+    public void startGame() {
+        if (gameState != GameState.PREPARING || worldSpawn == null) {
+            // Handle error: Game not ready or world spawn not set
+            return;
+        }
+
+        World world = worldSpawn.getWorld();
+        world.setSpawnLocation(worldSpawn);
+        world.setGameRule(GameRule.KEEP_INVENTORY, true);
+        world.setPVP(false);
+
+        WorldBorder border = world.getWorldBorder();
+        border.setCenter(worldSpawn);
+        border.setSize(2000); // 1000 radius
+
+        for (Player player : Bukkit.getOnlinePlayers()) {
+            player.teleport(worldSpawn);
+            player.getInventory().clear();
+            player.getInventory().addItem(new ItemStack(Material.STONE_AXE));
+            player.getInventory().addItem(new ItemStack(Material.STONE_PICKAXE));
+            player.setGameMode(GameMode.SURVIVAL);
+        }
+
+        setupTeam();
+        startTimer();
+        gameState = GameState.FARMING;
+    }
+
+    public void setTime(int seconds) {
+        if (gameState != GameState.FARMING) {
+            // Handle error: Game not in farming phase
+            return;
+        }
+        this.prepTimeSeconds = seconds;
+    }
+
+    private void setupTeam() {
+        Scoreboard scoreboard = Objects.requireNonNull(Bukkit.getScoreboardManager()).getMainScoreboard();
+        Team team = scoreboard.getTeam("WildDuel");
+        if (team == null) {
+            team = scoreboard.registerNewTeam("WildDuel");
+        }
+        team.setAllowFriendlyFire(false);
+        for (Player player : Bukkit.getOnlinePlayers()) {
+            team.addEntry(player.getName());
+        }
+    }
+
+    private void startTimer() {
+        timerBar = Bukkit.createBossBar("Time Left", BarColor.BLUE, BarStyle.SOLID);
+        timerBar.setVisible(true);
+        for (Player player : Bukkit.getOnlinePlayers()) {
+            timerBar.addPlayer(player);
+        }
+
+        gameTask = new BukkitRunnable() {
+            @Override
+            public void run() {
+                if (prepTimeSeconds <= 0) {
+                    startBattle();
+                    this.cancel();
+                    return;
+                }
+                prepTimeSeconds--;
+                timerBar.setProgress((double) prepTimeSeconds / 900);
+                timerBar.setTitle("Farming Time: " + formatTime(prepTimeSeconds));
+            }
+        };
+        gameTask.runTaskTimer(WildDuel.getInstance(), 0, 20);
+    }
+
+    private void startBattle() {
+        gameState = GameState.BATTLE;
+        World world = worldSpawn.getWorld();
+        world.setGameRule(GameRule.KEEP_INVENTORY, false);
+        world.setPVP(true);
+
+        Scoreboard scoreboard = Objects.requireNonNull(Bukkit.getScoreboardManager()).getMainScoreboard();
+        Team team = scoreboard.getTeam("WildDuel");
+        if (team != null) {
+            team.unregister();
+        }
+
+        for (Player player : Bukkit.getOnlinePlayers()) {
+            player.sendMessage("Battle has begun!");
+        }
+
+        WorldBorder border = world.getWorldBorder();
+        border.setSize(100, 60 * 10); // Shrink to 50 radius over 10 minutes
+
+        if (timerBar != null) {
+            timerBar.removeAll();
+            timerBar.setVisible(false);
+        }
+    }
+
+    private String formatTime(int seconds) {
+        int minutes = seconds / 60;
+        int remainingSeconds = seconds % 60;
+        return String.format("%02d:%02d", minutes, remainingSeconds);
+    }
+
+    public GameState getGameState() {
+        return gameState;
+    }
+
+    public void handlePlayerDeath(Player player) {
+        if (gameState == GameState.FARMING) {
+            // Respawn logic during farming phase
+        } else if (gameState == GameState.BATTLE) {
+            player.setGameMode(GameMode.SPECTATOR);
+        }
+    }
+}
+
+--- WildDuelCommand.java ---
+package com.wildduel;
+
+import org.bukkit.command.Command;
+import org.bukkit.command.CommandExecutor;
+import org.bukkit.command.CommandSender;
+import org.bukkit.entity.Player;
+
+public class WildDuelCommand implements CommandExecutor {
+
+    private final GameManager gameManager;
+
+    public WildDuelCommand(GameManager gameManager) {
+        this.gameManager = gameManager;
+    }
+
+    @Override
+    public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
+        if (!(sender instanceof Player)) {
+            sender.sendMessage("This command can only be used by a player.");
+            return true;
+        }
+
+        Player player = (Player) sender;
+
+        if (!player.isOp()) {
+            player.sendMessage("You do not have permission to use this command.");
+            return true;
+        }
+
+        if (args.length == 0) {
+            // Send help message
+            return true;
+        }
+
+        switch (args[0].toLowerCase()) {
+            case "set":
+                gameManager.setLobby(player.getLocation());
+                player.sendMessage("Wild Duel lobby has been set and all players have been teleported.");
+                break;
+            case "sp":
+                gameManager.setWorldSpawn(player.getLocation());
+                player.sendMessage("Wild Duel world spawn has been set.");
+                break;
+            case "start":
+                gameManager.startGame();
+                player.sendMessage("Wild Duel has started!");
+                break;
+            case "ts":
+                if (args.length > 1) {
+                    try {
+                        int seconds = Integer.parseInt(args[1]);
+                        gameManager.setTime(seconds);
+                        player.sendMessage("Farming time set to " + seconds + " seconds.");
+                    } catch (NumberFormatException e) {
+                        player.sendMessage("Invalid time specified.");
+                    }
+                } else {
+                    player.sendMessage("Usage: /wd ts <seconds>");
+                }
+                break;
+            default:
+                player.sendMessage("Unknown command.");
+                break;
+        }
+
+        return true;
+    }
+}
+
+--- PlayerEventListener.java ---
+package com.wildduel;
+
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.Listener;
+import org.bukkit.event.entity.PlayerDeathEvent;
+
+public class PlayerEventListener implements Listener {
+
+    private final GameManager gameManager;
+
+    public PlayerEventListener(GameManager gameManager) {
+        this.gameManager = gameManager;
+    }
+
+    @EventHandler
+    public void onPlayerDeath(PlayerDeathEvent event) {
+        gameManager.handlePlayerDeath(event.getEntity());
+    }
+}
+
+--- GameState.java ---
+package com.wildduel;
+
+public enum GameState {
+    LOBBY,      // Waiting for players, game not set
+    PREPARING,  // Game set, waiting to start
+    FARMING,    // Farming phase
+    BATTLE      // Battle phase
+}
