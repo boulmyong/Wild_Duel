@@ -9,10 +9,12 @@ public class WildDuelCommand implements CommandExecutor {
 
     private final GameManager gameManager;
     private final TeamManager teamManager;
+    private final TeamAdminManager teamAdminManager;
 
-    public WildDuelCommand(GameManager gameManager, TeamManager teamManager) {
+    public WildDuelCommand(GameManager gameManager, TeamManager teamManager, TeamAdminManager teamAdminManager) {
         this.gameManager = gameManager;
         this.teamManager = teamManager;
+        this.teamAdminManager = teamAdminManager;
     }
 
     @Override
@@ -77,7 +79,7 @@ public class WildDuelCommand implements CommandExecutor {
                 }
                 break;
             case "team":
-                new TeamGUI(teamManager).open(player);
+                new TeamAdminGUI(teamAdminManager, teamManager).open(player);
                 break;
             default:
                 sendHelpMessage(player);
@@ -94,7 +96,7 @@ public class WildDuelCommand implements CommandExecutor {
         player.sendMessage("/wd start - 게임을 시작합니다.");
         player.sendMessage("/wd preptime <초> - 시작 전 파밍 시간을 설정합니다.");
         player.sendMessage("/wd st <초> - 남은 파밍 시간을 변경합니다.");
-        player.sendMessage("/wd team - 팀 선택 GUI를 엽니다.");
+        player.sendMessage("/wd team - 팀 관리 GUI를 엽니다.");
         player.sendMessage("/wd help - 도움말을 표시합니다.");
     }
 }
