@@ -6,3 +6,12 @@ commands:
   wd:
     description: Wild Duel command.
     usage: /wd <set|sp|start|ts>
+  tpa:
+    description: Request to teleport to a team member.
+    usage: /tpa <player>
+  tpacancel:
+    description: Cancel a TPA request.
+    usage: /tpacancel
+  tparesponse:
+    description: Accept or deny a TPA request.
+    usage: /tparesponse <accept|deny> <player>
