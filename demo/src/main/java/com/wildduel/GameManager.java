@@ -16,56 +16,53 @@ import java.util.Objects;
 
 public class GameManager {
 
+    private final TeamManager teamManager;
     private GameState gameState = GameState.LOBBY;
-    private Location lobbySpawn;
-    private Location worldSpawn;
+    private Location duelStartLocation;
     private BossBar timerBar;
     private int initialPrepTimeSeconds = 900; // 15 minutes default
     private int prepTimeSeconds;
     private BukkitRunnable gameTask;
 
-    public void setLobby(Location location) {
-        if (gameState != GameState.LOBBY) {
-            // Handle error: Game already in progress
-            return;
-        }
-        this.lobbySpawn = location;
-        World world = location.getWorld();
-        if (world != null) {
-            world.setSpawnLocation(lobbySpawn);
-        }
-
-        for (Player player : Bukkit.getOnlinePlayers()) {
-            Bukkit.getScheduler().runTask(WildDuel.getInstance(), () -> {
-                player.teleport(lobbySpawn);
-                WildDuel.getInstance().getLogger().info("Teleported " + player.getName() + " to lobby.");
-            });
-        }
-        gameState = GameState.PREPARING;
+    public GameManager(TeamManager teamManager) {
+        this.teamManager = teamManager;
     }
 
     public void setWorldSpawn(Location location) {
-        this.worldSpawn = location;
+        World world = location.getWorld();
+        if (world != null) {
+            world.setSpawnLocation(location);
+        }
+        if (gameState == GameState.LOBBY) {
+            gameState = GameState.PREPARING;
+        }
+    }
+
+    public void setDuelStartLocation(Location location) {
+        this.duelStartLocation = location;
+        if (gameState == GameState.LOBBY) {
+            gameState = GameState.PREPARING;
+        }
     }
 
     public void startGame() {
-        if (gameState != GameState.PREPARING || worldSpawn == null) {
-            // Handle error: Game not ready or world spawn not set
+        if (gameState != GameState.PREPARING || duelStartLocation == null) {
+            // Handle error: Game not ready or duel start location not set
             return;
         }
 
         this.prepTimeSeconds = this.initialPrepTimeSeconds;
-        World world = worldSpawn.getWorld();
-        world.setSpawnLocation(worldSpawn);
+        World world = duelStartLocation.getWorld();
+        world.setSpawnLocation(duelStartLocation);
         world.setGameRule(GameRule.KEEP_INVENTORY, true);
         world.setPVP(false);
 
         WorldBorder border = world.getWorldBorder();
-        border.setCenter(worldSpawn);
+        border.setCenter(duelStartLocation);
         border.setSize(2000); // 1000 radius
 
         for (Player player : Bukkit.getOnlinePlayers()) {
-            player.teleport(worldSpawn);
+            player.teleport(duelStartLocation);
             player.getInventory().clear();
             player.getInventory().addItem(new ItemStack(Material.STONE_AXE));
             player.getInventory().addItem(new ItemStack(Material.STONE_PICKAXE));
@@ -99,13 +96,16 @@ public class GameManager {
 
     private void setupTeam() {
         Scoreboard scoreboard = Objects.requireNonNull(Bukkit.getScoreboardManager()).getMainScoreboard();
-        Team team = scoreboard.getTeam("WildDuel");
-        if (team == null) {
-            team = scoreboard.registerNewTeam("WildDuel");
-        }
-        team.setAllowFriendlyFire(false);
-        for (Player player : Bukkit.getOnlinePlayers()) {
-            team.addEntry(player.getName());
+        for (TeamManager.TeamData teamData : teamManager.getTeams().values()) {
+            Team team = scoreboard.getTeam(teamData.getName());
+            if (team == null) {
+                team = scoreboard.registerNewTeam(teamData.getName());
+            }
+            team.setAllowFriendlyFire(false);
+            team.setColor(teamData.getColor());
+            for (Player player : teamData.getPlayers()) {
+                team.addEntry(player.getName());
+            }
         }
     }
 
@@ -134,14 +134,17 @@ public class GameManager {
 
     private void startBattle() {
         gameState = GameState.BATTLE;
-        World world = worldSpawn.getWorld();
+        if (duelStartLocation == null) return;
+        World world = duelStartLocation.getWorld();
         world.setGameRule(GameRule.KEEP_INVENTORY, false);
         world.setPVP(true);
 
         Scoreboard scoreboard = Objects.requireNonNull(Bukkit.getScoreboardManager()).getMainScoreboard();
-        Team team = scoreboard.getTeam("WildDuel");
-        if (team != null) {
-            team.unregister();
+        for (TeamManager.TeamData teamData : teamManager.getTeams().values()) {
+            Team team = scoreboard.getTeam(teamData.getName());
+            if (team != null) {
+                team.unregister();
+            }
         }
 
         for (Player player : Bukkit.getOnlinePlayers()) {

@@ -8,9 +8,11 @@ import org.bukkit.entity.Player;
 public class WildDuelCommand implements CommandExecutor {
 
     private final GameManager gameManager;
+    private final TeamManager teamManager;
 
-    public WildDuelCommand(GameManager gameManager) {
+    public WildDuelCommand(GameManager gameManager, TeamManager teamManager) {
         this.gameManager = gameManager;
+        this.teamManager = teamManager;
     }
 
     @Override
@@ -37,12 +39,12 @@ public class WildDuelCommand implements CommandExecutor {
                 sendHelpMessage(player);
                 break;
             case "set":
-                gameManager.setLobby(player.getLocation());
-                player.sendMessage("Wild Duel lobby has been set and all players have been teleported.");
+                gameManager.setWorldSpawn(player.getLocation());
+                player.sendMessage("월드 스폰 위치를 현재 위치로 설정했습니다.");
                 break;
             case "sp":
-                gameManager.setWorldSpawn(player.getLocation());
-                player.sendMessage("Wild Duel world spawn has been set.");
+                gameManager.setDuelStartLocation(player.getLocation());
+                player.sendMessage("듀얼 시작 위치를 현재 위치로 설정했습니다.");
                 break;
             case "start":
                 gameManager.startGame();
@@ -74,6 +76,9 @@ public class WildDuelCommand implements CommandExecutor {
                     player.sendMessage("Usage: /wd st <seconds>");
                 }
                 break;
+            case "team":
+                new TeamGUI(teamManager).open(player);
+                break;
             default:
                 sendHelpMessage(player);
                 break;
@@ -84,11 +89,12 @@ public class WildDuelCommand implements CommandExecutor {
 
     private void sendHelpMessage(Player player) {
         player.sendMessage("--- 와일드 듀얼 명령어 목록 ---");
-        player.sendMessage("/wd set - 로비를 설정하고 모든 플레이어를 텔레포트합니다.");
-        player.sendMessage("/wd sp - 월드 스폰 위치를 설정합니다.");
+        player.sendMessage("/wd set - 월드의 기본 스폰 위치를 설정합니다.");
+        player.sendMessage("/wd sp - 듀얼 시작 위치를 설정합니다.");
         player.sendMessage("/wd start - 게임을 시작합니다.");
         player.sendMessage("/wd preptime <초> - 시작 전 파밍 시간을 설정합니다.");
         player.sendMessage("/wd st <초> - 남은 파밍 시간을 변경합니다.");
+        player.sendMessage("/wd team - 팀 선택 GUI를 엽니다.");
         player.sendMessage("/wd help - 도움말을 표시합니다.");
     }
 }

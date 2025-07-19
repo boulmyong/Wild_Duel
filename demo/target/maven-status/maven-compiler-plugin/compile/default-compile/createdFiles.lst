@@ -1,7 +1,12 @@
 com\wildduel\WildDuel.class
+com\wildduel\TeamGUI$1.class
 com\wildduel\GameManager.class
-com\wildduel\GameManager$1.class
 com\wildduel\WildDuelCommand.class
+com\wildduel\TeamGUIListener.class
+com\wildduel\TeamManager$TeamData.class
+com\wildduel\TeamManager.class
+com\wildduel\TeamGUI.class
+com\wildduel\GameManager$1.class
 com\wildduel\GameState.class
 com\wildduel\WildDuelTabCompleter.class
 com\wildduel\PlayerEventListener.class

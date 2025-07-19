@@ -6,14 +6,17 @@ public class WildDuel extends JavaPlugin {
 
     private static WildDuel instance;
     private GameManager gameManager;
+    private TeamManager teamManager;
 
     @Override
     public void onEnable() {
         instance = this;
-        gameManager = new GameManager();
-        getCommand("wd").setExecutor(new WildDuelCommand(gameManager));
+        gameManager = new GameManager(teamManager);
+        teamManager = new TeamManager();
+        getCommand("wd").setExecutor(new WildDuelCommand(gameManager, teamManager));
         getCommand("wd").setTabCompleter(new WildDuelTabCompleter());
         getServer().getPluginManager().registerEvents(new PlayerEventListener(gameManager), this);
+        getServer().getPluginManager().registerEvents(new TeamGUIListener(teamManager), this);
         getLogger().info("WildDuel plugin enabled!");
     }
 
