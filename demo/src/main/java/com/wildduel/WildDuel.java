@@ -12,6 +12,7 @@ public class WildDuel extends JavaPlugin {
         instance = this;
         gameManager = new GameManager();
         getCommand("wd").setExecutor(new WildDuelCommand(gameManager));
+        getCommand("wd").setTabCompleter(new WildDuelTabCompleter());
         getServer().getPluginManager().registerEvents(new PlayerEventListener(gameManager), this);
         getLogger().info("WildDuel plugin enabled!");
     }

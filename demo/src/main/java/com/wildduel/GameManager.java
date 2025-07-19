@@ -20,7 +20,8 @@ public class GameManager {
     private Location lobbySpawn;
     private Location worldSpawn;
     private BossBar timerBar;
-    private int prepTimeSeconds = 900; // 15 minutes
+    private int initialPrepTimeSeconds = 900; // 15 minutes default
+    private int prepTimeSeconds;
     private BukkitRunnable gameTask;
 
     public void setLobby(Location location) {
@@ -37,7 +38,6 @@ public class GameManager {
         for (Player player : Bukkit.getOnlinePlayers()) {
             Bukkit.getScheduler().runTask(WildDuel.getInstance(), () -> {
                 player.teleport(lobbySpawn);
-                player.addPotionEffect(new PotionEffect(PotionEffectType.SATURATION, Integer.MAX_VALUE, 0, false, false));
                 WildDuel.getInstance().getLogger().info("Teleported " + player.getName() + " to lobby.");
             });
         }
@@ -54,6 +54,7 @@ public class GameManager {
             return;
         }
 
+        this.prepTimeSeconds = this.initialPrepTimeSeconds;
         World world = worldSpawn.getWorld();
         world.setSpawnLocation(worldSpawn);
         world.setGameRule(GameRule.KEEP_INVENTORY, true);
@@ -69,6 +70,7 @@ public class GameManager {
             player.getInventory().addItem(new ItemStack(Material.STONE_AXE));
             player.getInventory().addItem(new ItemStack(Material.STONE_PICKAXE));
             player.setGameMode(GameMode.SURVIVAL);
+            player.addPotionEffect(new PotionEffect(PotionEffectType.SATURATION, Integer.MAX_VALUE, 0, false, false));
         }
 
         setupTeam();
@@ -76,10 +78,21 @@ public class GameManager {
         gameState = GameState.FARMING;
     }
 
+    public void setPrepTime(int seconds) {
+        if (gameState != GameState.PREPARING) {
+            // Handle error: Can only set prep time before the game starts
+            return;
+        }
+        this.initialPrepTimeSeconds = seconds;
+    }
+
     public void setTime(int seconds) {
         if (gameState != GameState.FARMING) {
             // Handle error: Game not in farming phase
             return;
+        }
+        if (seconds > this.initialPrepTimeSeconds) {
+            seconds = this.initialPrepTimeSeconds;
         }
         this.prepTimeSeconds = seconds;
     }
@@ -112,7 +125,7 @@ public class GameManager {
                     return;
                 }
                 prepTimeSeconds--;
-                timerBar.setProgress((double) prepTimeSeconds / 900);
+                timerBar.setProgress((double) prepTimeSeconds / initialPrepTimeSeconds);
                 timerBar.setTitle("Farming Time: " + formatTime(prepTimeSeconds));
             }
         };
@@ -133,6 +146,7 @@ public class GameManager {
 
         for (Player player : Bukkit.getOnlinePlayers()) {
             player.sendMessage("Battle has begun!");
+            player.removePotionEffect(PotionEffectType.SATURATION);
         }
 
         WorldBorder border = world.getWorldBorder();
