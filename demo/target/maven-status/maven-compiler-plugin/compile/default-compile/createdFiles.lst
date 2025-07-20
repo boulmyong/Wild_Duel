@@ -10,6 +10,7 @@ com\wildduel\TeamAdminGUIListener.class
 com\wildduel\TeamManager$TeamData.class
 com\wildduel\TpaRequest.class
 com\wildduel\AdminGUI.class
+com\wildduel\TeamSelectCommand.class
 com\wildduel\TpaRefreshCommand.class
 com\wildduel\TeamGUI.class
 com\wildduel\GameManager$1.class
@@ -20,6 +21,7 @@ com\wildduel\TpaManager$1.class
 com\wildduel\TeamGUI$1.class
 com\wildduel\TeamAdminManager$PlayerSelection.class
 com\wildduel\AdminGUIListener$1.class
+com\wildduel\PlayerTeamCommand.class
 com\wildduel\TeamCommand.class
 com\wildduel\TeamManager.class
 com\wildduel\TeamType.class

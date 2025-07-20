@@ -20,15 +20,18 @@ public class TeamGUI {
     }
 
     public void open(Player player) {
-        Inventory gui = Bukkit.createInventory(null, 9, "팀 선택");
+        Inventory gui = Bukkit.createInventory(null, 9, "§1팀 선택하기");
 
-        for (TeamManager.TeamData team : teamManager.getTeams().values()) {
+        for (TeamManager.TeamData team : teamManager.getTeams()) {
             ItemStack teamItem = new ItemStack(getWoolMaterial(team.getColor()), 1);
             ItemMeta meta = teamItem.getItemMeta();
-            meta.setDisplayName(team.getColor() + team.getName() + " 팀");
+            meta.setDisplayName(team.getColor() + team.getName() + " 팀 참가");
             List<String> lore = new ArrayList<>();
+            lore.add("§7클릭하여 이 팀에 합류합니다.");
+            lore.add(" ");
+            lore.add("§f현재 팀원:");
             for (Player member : team.getPlayers()) {
-                lore.add("- " + member.getName());
+                lore.add("§7- " + member.getName());
             }
             meta.setLore(lore);
             teamItem.setItemMeta(meta);
@@ -37,7 +40,7 @@ public class TeamGUI {
 
         ItemStack leaveItem = new ItemStack(Material.BARRIER);
         ItemMeta leaveMeta = leaveItem.getItemMeta();
-        leaveMeta.setDisplayName("Leave Team");
+        leaveMeta.setDisplayName("§c팀 나가기");
         leaveItem.setItemMeta(leaveMeta);
         gui.setItem(8, leaveItem);
 

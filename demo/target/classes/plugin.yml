@@ -15,3 +15,6 @@ commands:
   tparesponse:
     description: Accept or deny a TPA request.
     usage: /tparesponse <accept|deny> <player>
+  팀선택:
+    description: Open the team selection GUI.
+    usage: /팀선택

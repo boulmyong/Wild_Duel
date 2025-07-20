@@ -1,15 +1,17 @@
 package com.wildduel;
 
 import org.bukkit.Bukkit;
+import org.bukkit.GameMode;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.inventory.InventoryView;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.persistence.PersistentDataType;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.UUID;
 
 public class TeamAdminGUIListener implements Listener {
@@ -24,30 +26,40 @@ public class TeamAdminGUIListener implements Listener {
 
     @EventHandler
     public void onInventoryClick(InventoryClickEvent event) {
-        if (!event.getView().getTitle().equals("팀 관리")) {
+        InventoryView view = event.getView();
+        if (!view.getTitle().equals("§8팀 수동 배정")) {
+            return;
+        }
+
+        if (event.getClickedInventory() != view.getTopInventory()) {
             return;
         }
 
         event.setCancelled(true);
-        Player admin = (Player) event.getWhoClicked();
-        ItemStack clickedItem = event.getCurrentItem();
 
+        ItemStack clickedItem = event.getCurrentItem();
         if (clickedItem == null || clickedItem.getType() == Material.AIR) {
             return;
         }
 
+        Player admin = (Player) event.getWhoClicked();
         TeamAdminManager.PlayerSelection selection = adminManager.getPlayerSelection(admin);
+        boolean refreshGui = true;
 
-        // Handle clicks
         Material type = clickedItem.getType();
-        if (type == Material.PLAYER_HEAD) {
-            Player clickedPlayer = Bukkit.getPlayer(clickedItem.getItemMeta().getDisplayName());
-            if (clickedPlayer != null) {
-                selection.setSelectedPlayer(clickedPlayer.getUniqueId());
+        ItemMeta meta = clickedItem.getItemMeta();
+
+        if (type == Material.PLAYER_HEAD && meta != null) {
+            String uuidString = meta.getPersistentDataContainer().get(TeamAdminGUI.PLAYER_UUID_KEY, PersistentDataType.STRING);
+            if (uuidString != null) {
+                selection.setSelectedPlayer(UUID.fromString(uuidString));
             }
         } else if (type == Material.ARROW) {
+            // 3. Prevent negative page index
             if (clickedItem.getItemMeta().getDisplayName().contains("이전")) {
-                selection.setCurrentPage(selection.getCurrentPage() - 1);
+                if (selection.getCurrentPage() > 0) {
+                    selection.setCurrentPage(selection.getCurrentPage() - 1);
+                }
             } else {
                 selection.setCurrentPage(selection.getCurrentPage() + 1);
             }
@@ -55,36 +67,51 @@ public class TeamAdminGUIListener implements Listener {
             selection.setSelectedTeam(getTeamTypeFromMaterial(type));
         } else if (type == Material.ANVIL) {
             applyTeamSelection(admin, selection);
+            refreshGui = false;
+            admin.closeInventory();
+        } else {
+            refreshGui = false;
         }
 
-        // Refresh GUI
-        new TeamAdminGUI(adminManager, teamManager).open(admin);
+        if (refreshGui) {
+            new TeamAdminGUI(adminManager, teamManager).open(admin);
+        }
     }
 
     private void applyTeamSelection(Player admin, TeamAdminManager.PlayerSelection selection) {
         UUID selectedPlayerUUID = selection.getSelectedPlayer();
         TeamType selectedTeam = selection.getSelectedTeam();
 
-        if (selectedPlayerUUID == null || selectedTeam == null) {
-            admin.sendMessage("§c플레이어와 팀을 모두 선택하세요.");
+        if (selectedPlayerUUID == null) {
+            admin.sendMessage("§c먼저 플레이어를 선택해주세요.");
+            return;
+        }
+        if (selectedTeam == null) {
+            admin.sendMessage("§c변경할 팀을 선택해주세요.");
             return;
         }
 
         Player selectedPlayer = Bukkit.getPlayer(selectedPlayerUUID);
         if (selectedPlayer == null) {
-            admin.sendMessage("§c선택한 플레이어가 오프라인입니다.");
+            admin.sendMessage("§c해당 플레이어는 오프라인 상태입니다.");
             return;
         }
 
-        teamManager.leaveTeam(selectedPlayer); // Clear previous team
-
         if (selectedTeam == TeamType.RED || selectedTeam == TeamType.BLUE) {
             teamManager.joinTeam(selectedPlayer, selectedTeam.getName());
-        } else if (selectedTeam == TeamType.SPECTATOR) {
-            selectedPlayer.setGameMode(org.bukkit.GameMode.SPECTATOR);
+            admin.sendMessage(String.format("§a%s님을 %s 팀으로 설정했습니다.", selectedPlayer.getName(), selectedTeam.getName()));
+            selectedPlayer.sendMessage("§e[관리자] " + admin.getName() + "님이 당신을 " + selectedTeam.getColor() + selectedTeam.getName() + "§e 팀으로 옮겼습니다.");
+        } else {
+            teamManager.leaveTeam(selectedPlayer);
+            if (selectedTeam == TeamType.SPECTATOR) {
+                selectedPlayer.setGameMode(GameMode.SPECTATOR);
+                admin.sendMessage(String.format("§a%s님을 관전자로 설정했습니다.", selectedPlayer.getName()));
+                selectedPlayer.sendMessage("§e[관리자] " + admin.getName() + "님이 당신을 관전자로 설정했습니다.");
+            } else { // NONE
+                admin.sendMessage(String.format("§a%s님을 소속 없는 상태로 설정했습니다.", selectedPlayer.getName()));
+                selectedPlayer.sendMessage("§e[관리자] " + admin.getName() + "님이 당신을 팀에서 제외했습니다.");
+            }
         }
-
-        admin.sendMessage(String.format("§a%s님을 %s 팀으로 설정했습니다.", selectedPlayer.getName(), selectedTeam.getName()));
     }
 
     private TeamType getTeamTypeFromMaterial(Material material) {

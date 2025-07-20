@@ -11,26 +11,28 @@ import java.util.*;
 public class TeamManager {
 
     private final Map<String, TeamData> teams = new HashMap<>();
-    private final Map<Player, String> playerTeams = new HashMap<>();
+    private final Map<UUID, String> playerTeams = new HashMap<>();
 
     public TeamManager() {
-        // Pre-defined teams
+        initializeTeams();
+    }
+
+    public void initializeTeams() {
+        // Ensure teams are created on the main scoreboard
         createTeam("Red", ChatColor.RED);
         createTeam("Blue", ChatColor.BLUE);
     }
 
     public void createTeam(String name, ChatColor color) {
-        if (!teams.containsKey(name)) {
-            teams.put(name, new TeamData(name, color));
-            // Also create in scoreboard
-            Scoreboard scoreboard = Objects.requireNonNull(Bukkit.getScoreboardManager()).getMainScoreboard();
-            Team team = scoreboard.getTeam(name);
-            if (team == null) {
-                team = scoreboard.registerNewTeam(name);
-                team.setAllowFriendlyFire(false);
-                team.setColor(color);
-            }
+        teams.put(name, new TeamData(name, color));
+        Scoreboard scoreboard = Objects.requireNonNull(Bukkit.getScoreboardManager()).getMainScoreboard();
+        Team team = scoreboard.getTeam(name);
+        if (team == null) {
+            team = scoreboard.registerNewTeam(name);
         }
+        team.setAllowFriendlyFire(false);
+        team.setColor(color);
+        team.setPrefix(color + "[" + name + "] ");
     }
 
     public boolean joinTeam(Player player, String teamName) {
@@ -39,37 +41,39 @@ public class TeamManager {
         }
 
         leaveTeam(player); // Leave current team first
-        teams.get(teamName).getPlayers().add(player);
-        playerTeams.put(player, teamName);
+
+        TeamData teamData = teams.get(teamName);
+        teamData.getPlayers().add(player);
+        playerTeams.put(player.getUniqueId(), teamName);
+
+        updatePlayerScoreboard(player, teamData);
+        player.sendMessage(teamData.getColor() + "You have joined the " + teamData.getName() + " team.");
         return true;
     }
 
     public void leaveTeam(Player player) {
-        if (playerTeams.containsKey(player)) {
-            String teamName = playerTeams.get(player);
-            teams.get(teamName).getPlayers().remove(player);
-            playerTeams.remove(player);
+        if (playerTeams.containsKey(player.getUniqueId())) {
+            String teamName = playerTeams.remove(player.getUniqueId());
+            if (teams.containsKey(teamName)) {
+                teams.get(teamName).getPlayers().remove(player);
+            }
+            removePlayerFromScoreboardTeam(player);
         }
     }
 
     public String getPlayerTeam(Player player) {
-        return playerTeams.get(player);
-    }
-
-    public Set<Player> getTeamPlayers(String teamName) {
-        return teams.get(teamName).getPlayers();
+        return playerTeams.get(player.getUniqueId());
     }
 
     public void assignRandomTeams() {
         leaveAllTeams();
-        Player[] players = Bukkit.getOnlinePlayers().toArray(new Player[0]);
-        List<Player> playerList = new ArrayList<>(Arrays.asList(players));
-        Collections.shuffle(playerList);
+        List<Player> onlinePlayers = new ArrayList<>(Bukkit.getOnlinePlayers());
+        Collections.shuffle(onlinePlayers);
 
         List<String> teamNames = new ArrayList<>(teams.keySet());
         int teamIndex = 0;
 
-        for (Player player : playerList) {
+        for (Player player : onlinePlayers) {
             String teamName = teamNames.get(teamIndex);
             joinTeam(player, teamName);
             teamIndex = (teamIndex + 1) % teamNames.size();
@@ -77,24 +81,28 @@ public class TeamManager {
     }
 
     public void leaveAllTeams() {
-        for (Player player : Bukkit.getOnlinePlayers()) {
-            leaveTeam(player);
+        List<UUID> playerUuids = new ArrayList<>(playerTeams.keySet());
+        for (UUID uuid : playerUuids) {
+            Player player = Bukkit.getPlayer(uuid);
+            if (player != null) {
+                leaveTeam(player);
+            }
         }
     }
 
-    public Map<String, TeamData> getTeams() {
-        return teams;
+    public Collection<TeamData> getTeams() {
+        return teams.values();
     }
 
     private void updatePlayerScoreboard(Player player, TeamData teamData) {
         Scoreboard scoreboard = Objects.requireNonNull(Bukkit.getScoreboardManager()).getMainScoreboard();
         Team team = scoreboard.getTeam(teamData.getName());
         if (team == null) {
-            team = scoreboard.registerNewTeam(teamData.getName());
-            team.setAllowFriendlyFire(false);
-            team.setColor(teamData.getColor());
+            createTeam(teamData.getName(), teamData.getColor());
+            team = scoreboard.getTeam(teamData.getName());
         }
-        team.addEntry(player.getName());
+        player.setScoreboard(scoreboard);
+        Objects.requireNonNull(team).addEntry(player.getName());
     }
 
     private void removePlayerFromScoreboardTeam(Player player) {
@@ -102,6 +110,18 @@ public class TeamManager {
         Team team = scoreboard.getEntryTeam(player.getName());
         if (team != null) {
             team.removeEntry(player.getName());
+        }
+        player.setScoreboard(scoreboard);
+    }
+
+    public void applyTeamVisualsOnJoin(Player player) {
+        player.setScoreboard(Bukkit.getScoreboardManager().getMainScoreboard());
+        String teamName = getPlayerTeam(player);
+        if (teamName != null) {
+            TeamData teamData = teams.get(teamName);
+            if (teamData != null) {
+                updatePlayerScoreboard(player, teamData);
+            }
         }
     }
 

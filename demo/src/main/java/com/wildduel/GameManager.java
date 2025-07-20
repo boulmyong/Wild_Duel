@@ -23,6 +23,7 @@ public class GameManager {
     private BukkitRunnable gameTask;
     private BukkitRunnable saturationTask;
     private boolean autoSmeltEnabled = true; // Default to on
+    private boolean playerTeamSelectionEnabled = false; // Default to off
 
     public GameManager(TeamManager teamManager) {
         this.teamManager = teamManager;
@@ -71,7 +72,6 @@ public class GameManager {
 
     public void startGame() {
         if (gameState != GameState.PREPARING || duelStartLocation == null) {
-            // Handle error: Game not ready or duel start location not set
             return;
         }
 
@@ -98,16 +98,15 @@ public class GameManager {
     }
 
     public void setPrepTime(int seconds) {
-        if (gameState != GameState.PREPARING) {
-            // Handle error: Can only set prep time before the game starts
+        if (gameState == GameState.FARMING || gameState == GameState.BATTLE) {
             return;
         }
+        if (seconds < 0) seconds = 0;
         this.initialPrepTimeSeconds = seconds;
     }
 
     public void setTime(int seconds) {
         if (gameState != GameState.FARMING) {
-            // Handle error: Game not in farming phase
             return;
         }
         if (seconds > this.initialPrepTimeSeconds) {
@@ -187,9 +186,8 @@ public class GameManager {
     }
 
     public void setAutoSmelt(boolean enabled) {
-        if (gameState != GameState.PREPARING) {
-            // Or maybe allow changing anytime? For now, only in preparing phase.
-            return;
+        if (gameState == GameState.FARMING || gameState == GameState.BATTLE) {
+            return; // Can't change during game
         }
         this.autoSmeltEnabled = enabled;
     }
@@ -200,5 +198,64 @@ public class GameManager {
 
     public int getInitialPrepTimeSeconds() {
         return initialPrepTimeSeconds;
+    }
+
+    public void setPlayerTeamSelectionEnabled(boolean enabled) {
+        this.playerTeamSelectionEnabled = enabled;
+    }
+
+    public boolean isPlayerTeamSelectionEnabled() {
+        return this.playerTeamSelectionEnabled;
+    }
+
+    public void checkWinCondition() {
+        if (gameState != GameState.BATTLE) {
+            return;
+        }
+
+        TeamManager.TeamData winner = null;
+        int teamsWithPlayers = 0;
+
+        for (TeamManager.TeamData teamData : teamManager.getTeams()) {
+            long aliveCount = teamData.getPlayers().stream()
+                    .filter(p -> p.isOnline() && p.getGameMode() == GameMode.SURVIVAL)
+                    .count();
+
+            if (aliveCount > 0) {
+                teamsWithPlayers++;
+                winner = teamData;
+            }
+        }
+
+        if (teamsWithPlayers <= 1) {
+            endGame(winner);
+        }
+    }
+
+    private void endGame(TeamManager.TeamData winner) {
+        if (winner != null) {
+            Bukkit.broadcastMessage("§a========================================");
+            Bukkit.broadcastMessage("§e           GAME OVER");
+            Bukkit.broadcastMessage(" ");
+            Bukkit.broadcastMessage("§fWinner: " + winner.getColor() + winner.getName() + " Team!");
+            Bukkit.broadcastMessage("§a========================================");
+
+            for (Player player : Bukkit.getOnlinePlayers()) {
+                player.sendTitle(winner.getColor() + winner.getName() + " Team Wins!", "Congratulations!", 10, 70, 20);
+            }
+        } else {
+            Bukkit.broadcastMessage("§a========================================");
+            Bukkit.broadcastMessage("§e           GAME OVER");
+            Bukkit.broadcastMessage(" ");
+            Bukkit.broadcastMessage("§fThe game ended in a draw!");
+            Bukkit.broadcastMessage("§a========================================");
+        }
+
+        // Reset game state and other variables
+        gameState = GameState.LOBBY;
+        if (gameTask != null) gameTask.cancel();
+        if (timerBar != null) timerBar.removeAll();
+        teamManager.leaveAllTeams();
+        // Potentially teleport all players to spawn after a delay
     }
 }

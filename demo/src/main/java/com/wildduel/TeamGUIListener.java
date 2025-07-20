@@ -6,6 +6,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.inventory.InventoryView;
 import org.bukkit.inventory.ItemStack;
 
 public class TeamGUIListener implements Listener {
@@ -18,30 +19,34 @@ public class TeamGUIListener implements Listener {
 
     @EventHandler
     public void onInventoryClick(InventoryClickEvent event) {
-        if (!event.getView().getTitle().equals("팀 선택")) {
+        InventoryView view = event.getView();
+        if (!view.getTitle().equals("§1팀 선택하기")) {
             return;
         }
 
+        // 1. Immediately cancel the event.
         event.setCancelled(true);
 
         Player player = (Player) event.getWhoClicked();
         ItemStack clickedItem = event.getCurrentItem();
 
+        // 2. Send a debug message.
+        player.sendMessage("§e[DEBUG] Team Select Panel click detected. Event cancelled.");
+
         if (clickedItem == null || clickedItem.getType() == Material.AIR) {
             return;
         }
-
+        
         if (clickedItem.getType() == Material.BARRIER) {
             teamManager.leaveTeam(player);
-            player.sendMessage("You have left the team.");
+            player.sendMessage("§7팀에서 나왔습니다.");
             player.closeInventory();
             return;
         }
 
         if (clickedItem.getType().name().endsWith("_WOOL")) {
-            String teamName = ChatColor.stripColor(clickedItem.getItemMeta().getDisplayName()).replace(" Team", "");
+            String teamName = ChatColor.stripColor(clickedItem.getItemMeta().getDisplayName()).replace(" 팀 참가", "");
             teamManager.joinTeam(player, teamName);
-            player.sendMessage("You have joined the " + teamName + " team.");
             player.closeInventory();
         }
     }

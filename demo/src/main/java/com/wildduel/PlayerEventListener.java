@@ -18,10 +18,12 @@ import java.util.Map;
 public class PlayerEventListener implements Listener {
 
     private final GameManager gameManager;
+    private final TeamManager teamManager; // Add TeamManager
     private final Map<Material, Material> smeltMap = new HashMap<>();
 
-    public PlayerEventListener(GameManager gameManager) {
+    public PlayerEventListener(GameManager gameManager, TeamManager teamManager) { // Modify constructor
         this.gameManager = gameManager;
+        this.teamManager = teamManager; // Initialize TeamManager
         // Initialize smelt map
         smeltMap.put(Material.IRON_ORE, Material.IRON_INGOT);
         smeltMap.put(Material.GOLD_ORE, Material.GOLD_INGOT);
@@ -41,8 +43,11 @@ public class PlayerEventListener implements Listener {
     @EventHandler
     public void onPlayerJoin(PlayerJoinEvent event) {
         Player player = event.getPlayer();
-        GameState gameState = gameManager.getGameState();
+        
+        // Force set the main scoreboard and apply team visuals
+        teamManager.applyTeamVisualsOnJoin(player);
 
+        GameState gameState = gameManager.getGameState();
         if (gameState == GameState.PREPARING || gameState == GameState.FARMING) {
             player.addPotionEffect(new PotionEffect(PotionEffectType.SATURATION, 200, 0, false, false));
         }
