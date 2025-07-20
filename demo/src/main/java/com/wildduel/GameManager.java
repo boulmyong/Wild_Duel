@@ -35,6 +35,13 @@ public class GameManager {
         }
         if (gameState == GameState.LOBBY) {
             gameState = GameState.PREPARING;
+            applySaturationEffect();
+        }
+    }
+
+    private void applySaturationEffect() {
+        for (Player player : Bukkit.getOnlinePlayers()) {
+            player.addPotionEffect(new PotionEffect(PotionEffectType.SATURATION, Integer.MAX_VALUE, 0, false, false));
         }
     }
 
@@ -67,8 +74,9 @@ public class GameManager {
             player.getInventory().addItem(new ItemStack(Material.STONE_AXE));
             player.getInventory().addItem(new ItemStack(Material.STONE_PICKAXE));
             player.setGameMode(GameMode.SURVIVAL);
-            player.addPotionEffect(new PotionEffect(PotionEffectType.SATURATION, Integer.MAX_VALUE, 0, false, false));
         }
+
+        applySaturationEffect();
 
         setupTeam();
         startTimer();
