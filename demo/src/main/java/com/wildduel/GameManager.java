@@ -35,7 +35,6 @@ public class GameManager {
         if (world != null) {
             world.setSpawnLocation(location);
         }
-<<<<<<< HEAD
         transitionToPreparing();
     }
 
@@ -57,17 +56,6 @@ public class GameManager {
         }
         for (Player player : Bukkit.getOnlinePlayers()) {
             player.removePotionEffect(PotionEffectType.SATURATION);
-=======
-        if (gameState == GameState.LOBBY) {
-            gameState = GameState.PREPARING;
-            applySaturationEffect();
-        }
-    }
-
-    private void applySaturationEffect() {
-        for (Player player : Bukkit.getOnlinePlayers()) {
-            player.addPotionEffect(new PotionEffect(PotionEffectType.SATURATION, Integer.MAX_VALUE, 0, false, false));
->>>>>>> 430f02a7c8cba737d27e2010c7875510514866e6
         }
     }
 
@@ -106,8 +94,6 @@ public class GameManager {
             player.getInventory().addItem(new ItemStack(Material.STONE_PICKAXE));
             player.setGameMode(GameMode.SURVIVAL);
         }
-
-        applySaturationEffect();
 
         setupTeam();
         startTimer();

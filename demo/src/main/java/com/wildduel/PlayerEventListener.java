@@ -28,11 +28,7 @@ public class PlayerEventListener implements Listener {
         GameState gameState = gameManager.getGameState();
 
         if (gameState == GameState.PREPARING || gameState == GameState.FARMING) {
-<<<<<<< HEAD
             player.addPotionEffect(new PotionEffect(PotionEffectType.SATURATION, 200, 0, false, false));
-=======
-            player.addPotionEffect(new PotionEffect(PotionEffectType.SATURATION, Integer.MAX_VALUE, 0, false, false));
->>>>>>> 430f02a7c8cba737d27e2010c7875510514866e6
         }
     }
 
@@ -42,11 +38,7 @@ public class PlayerEventListener implements Listener {
         GameState gameState = gameManager.getGameState();
 
         if (gameState == GameState.PREPARING || gameState == GameState.FARMING) {
-<<<<<<< HEAD
             player.addPotionEffect(new PotionEffect(PotionEffectType.SATURATION, 200, 0, false, false));
-=======
-            player.addPotionEffect(new PotionEffect(PotionEffectType.SATURATION, Integer.MAX_VALUE, 0, false, false));
->>>>>>> 430f02a7c8cba737d27e2010c7875510514866e6
         }
     }
 }
