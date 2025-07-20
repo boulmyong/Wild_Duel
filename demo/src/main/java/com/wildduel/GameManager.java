@@ -24,6 +24,8 @@ public class GameManager {
     private int prepTimeSeconds;
     private BukkitRunnable gameTask;
 
+    private BukkitRunnable saturationTask;
+
     public GameManager(TeamManager teamManager) {
         this.teamManager = teamManager;
     }
@@ -33,15 +35,39 @@ public class GameManager {
         if (world != null) {
             world.setSpawnLocation(location);
         }
-        if (gameState == GameState.LOBBY) {
-            gameState = GameState.PREPARING;
+        transitionToPreparing();
+    }
+
+    private void applySaturationEffectPeriodically() {
+        saturationTask = new BukkitRunnable() {
+            @Override
+            public void run() {
+                for (Player player : Bukkit.getOnlinePlayers()) {
+                    player.addPotionEffect(new PotionEffect(PotionEffectType.SATURATION, 200, 0, false, false));
+                }
+            }
+        };
+        saturationTask.runTaskTimer(WildDuel.getInstance(), 0, 100); // 5초마다 실행
+    }
+
+    private void stopSaturationEffect() {
+        if (saturationTask != null) {
+            saturationTask.cancel();
+        }
+        for (Player player : Bukkit.getOnlinePlayers()) {
+            player.removePotionEffect(PotionEffectType.SATURATION);
         }
     }
 
     public void setDuelStartLocation(Location location) {
         this.duelStartLocation = location;
+        transitionToPreparing();
+    }
+
+    private void transitionToPreparing() {
         if (gameState == GameState.LOBBY) {
             gameState = GameState.PREPARING;
+            applySaturationEffectPeriodically();
         }
     }
 
@@ -67,7 +93,6 @@ public class GameManager {
             player.getInventory().addItem(new ItemStack(Material.STONE_AXE));
             player.getInventory().addItem(new ItemStack(Material.STONE_PICKAXE));
             player.setGameMode(GameMode.SURVIVAL);
-            player.addPotionEffect(new PotionEffect(PotionEffectType.SATURATION, Integer.MAX_VALUE, 0, false, false));
         }
 
         setupTeam();
@@ -149,8 +174,9 @@ public class GameManager {
 
         for (Player player : Bukkit.getOnlinePlayers()) {
             player.sendMessage("Battle has begun!");
-            player.removePotionEffect(PotionEffectType.SATURATION);
         }
+
+        stopSaturationEffect();
 
         WorldBorder border = world.getWorldBorder();
         border.setSize(100, 60 * 10); // Shrink to 50 radius over 10 minutes

@@ -22,6 +22,7 @@ com\wildduel\TeamManager.class
 com\wildduel\TeamType.class
 com\wildduel\TpaResponseCommand.class
 com\wildduel\TeamAdminManager.class
+com\wildduel\GameManager$2.class
 com\wildduel\TeamAdminGUI$1.class
 com\wildduel\TpaManager$2.class
 com\wildduel\GameState.class
