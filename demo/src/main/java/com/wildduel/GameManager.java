@@ -59,7 +59,7 @@ public class GameManager {
 
         WorldBorder border = world.getWorldBorder();
         border.setCenter(duelStartLocation);
-        border.setSize(2000); // 1000 radius
+        border.setSize(1000); // 500 radius
 
         for (Player player : Bukkit.getOnlinePlayers()) {
             player.teleport(duelStartLocation);
