@@ -44,6 +44,9 @@ public class WildDuelCommand implements CommandExecutor {
             case "preptime":
             case "st":
             case "team":
+            case "randomteam":
+            case "admin":
+            case "autosmelt":
                 handlePlayerCommands(sender, args);
                 break;
             case "tparefresh":
@@ -111,6 +114,28 @@ public class WildDuelCommand implements CommandExecutor {
             case "team":
                 new TeamAdminGUI(teamAdminManager, teamManager).open(player);
                 break;
+            case "randomteam":
+                teamManager.assignRandomTeams();
+                player.sendMessage("모든 플레이어를 랜덤으로 팀에 배정했습니다.");
+                break;
+            case "admin":
+                new AdminGUI(gameManager, teamManager, tpaManager, teamAdminManager).open(player);
+                break;
+            case "autosmelt":
+                if (args.length > 1) {
+                    if (args[1].equalsIgnoreCase("on")) {
+                        gameManager.setAutoSmelt(true);
+                        player.sendMessage("Auto-smelt enabled.");
+                    } else if (args[1].equalsIgnoreCase("off")) {
+                        gameManager.setAutoSmelt(false);
+                        player.sendMessage("Auto-smelt disabled.");
+                    } else {
+                        player.sendMessage("Usage: /wd autosmelt <on|off>");
+                    }
+                } else {
+                    player.sendMessage("Usage: /wd autosmelt <on|off>");
+                }
+                break;
         }
     }
 
@@ -172,8 +197,11 @@ public class WildDuelCommand implements CommandExecutor {
         sender.sendMessage("/wd preptime <초> - 시작 전 파밍 시간을 설정합니다.");
         sender.sendMessage("/wd st <초> - 남은 파밍 시간을 변경합니다.");
         sender.sendMessage("/wd team - 팀 관리 GUI를 엽니다.");
+        sender.sendMessage("/wd randomteam - 모든 플레이어를 랜덤으로 팀에 배정합니다.");
+        sender.sendMessage("/wd autosmelt <on|off> - 자동 제련 기능을 켜거나 끕니다.");
         sender.sendMessage("/wd tparefresh <플레이어|all> - TPA 쿨타임을 초기화합니다.");
         sender.sendMessage("/wd tpastatus <플레이어> - TPA 쿨타임 상태를 확인합니다.");
         sender.sendMessage("/wd help - 도움말을 표시합니다.");
+        sender.sendMessage("/wd admin - 관리자 패널 GUI를 엽니다.");
     }
 }

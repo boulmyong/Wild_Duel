@@ -27,6 +27,7 @@ public class WildDuel extends JavaPlugin {
         getServer().getPluginManager().registerEvents(new PlayerEventListener(gameManager), this);
         getServer().getPluginManager().registerEvents(new TeamAdminGUIListener(teamAdminManager, teamManager), this);
         getServer().getPluginManager().registerEvents(new TpaListener(tpaManager), this);
+        getServer().getPluginManager().registerEvents(new AdminGUIListener(gameManager, teamManager, tpaManager, teamAdminManager), this);
         getLogger().info("WildDuel plugin enabled!");
     }
 

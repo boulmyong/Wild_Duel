@@ -9,8 +9,6 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitRunnable;
-import org.bukkit.scoreboard.Scoreboard;
-import org.bukkit.scoreboard.Team;
 
 import java.util.Objects;
 
@@ -23,8 +21,8 @@ public class GameManager {
     private int initialPrepTimeSeconds = 900; // 15 minutes default
     private int prepTimeSeconds;
     private BukkitRunnable gameTask;
-
     private BukkitRunnable saturationTask;
+    private boolean autoSmeltEnabled = true; // Default to on
 
     public GameManager(TeamManager teamManager) {
         this.teamManager = teamManager;
@@ -79,7 +77,7 @@ public class GameManager {
 
         this.prepTimeSeconds = this.initialPrepTimeSeconds;
         World world = duelStartLocation.getWorld();
-        world.setSpawnLocation(duelStartLocation);
+        Objects.requireNonNull(world).setSpawnLocation(duelStartLocation);
         world.setGameRule(GameRule.KEEP_INVENTORY, true);
         world.setPVP(false);
 
@@ -95,7 +93,6 @@ public class GameManager {
             player.setGameMode(GameMode.SURVIVAL);
         }
 
-        setupTeam();
         startTimer();
         gameState = GameState.FARMING;
     }
@@ -119,21 +116,6 @@ public class GameManager {
         this.prepTimeSeconds = seconds;
     }
 
-    private void setupTeam() {
-        Scoreboard scoreboard = Objects.requireNonNull(Bukkit.getScoreboardManager()).getMainScoreboard();
-        for (TeamManager.TeamData teamData : teamManager.getTeams().values()) {
-            Team team = scoreboard.getTeam(teamData.getName());
-            if (team == null) {
-                team = scoreboard.registerNewTeam(teamData.getName());
-            }
-            team.setAllowFriendlyFire(false);
-            team.setColor(teamData.getColor());
-            for (Player player : teamData.getPlayers()) {
-                team.addEntry(player.getName());
-            }
-        }
-    }
-
     private void startTimer() {
         timerBar = Bukkit.createBossBar("Time Left", BarColor.BLUE, BarStyle.SOLID);
         timerBar.setVisible(true);
@@ -149,6 +131,13 @@ public class GameManager {
                     this.cancel();
                     return;
                 }
+
+                if (prepTimeSeconds == 300) {
+                    Bukkit.broadcastMessage("§e[Notice] §fFarming time ends in 5 minutes!");
+                } else if (prepTimeSeconds == 60) {
+                    Bukkit.broadcastMessage("§e[Notice] §fFarming time ends in 1 minute!");
+                }
+
                 prepTimeSeconds--;
                 timerBar.setProgress((double) prepTimeSeconds / initialPrepTimeSeconds);
                 timerBar.setTitle("Farming Time: " + formatTime(prepTimeSeconds));
@@ -161,16 +150,8 @@ public class GameManager {
         gameState = GameState.BATTLE;
         if (duelStartLocation == null) return;
         World world = duelStartLocation.getWorld();
-        world.setGameRule(GameRule.KEEP_INVENTORY, false);
+        Objects.requireNonNull(world).setGameRule(GameRule.KEEP_INVENTORY, false);
         world.setPVP(true);
-
-        Scoreboard scoreboard = Objects.requireNonNull(Bukkit.getScoreboardManager()).getMainScoreboard();
-        for (TeamManager.TeamData teamData : teamManager.getTeams().values()) {
-            Team team = scoreboard.getTeam(teamData.getName());
-            if (team != null) {
-                team.unregister();
-            }
-        }
 
         for (Player player : Bukkit.getOnlinePlayers()) {
             player.sendMessage("Battle has begun!");
@@ -203,5 +184,21 @@ public class GameManager {
         } else if (gameState == GameState.BATTLE) {
             player.setGameMode(GameMode.SPECTATOR);
         }
+    }
+
+    public void setAutoSmelt(boolean enabled) {
+        if (gameState != GameState.PREPARING) {
+            // Or maybe allow changing anytime? For now, only in preparing phase.
+            return;
+        }
+        this.autoSmeltEnabled = enabled;
+    }
+
+    public boolean isAutoSmeltEnabled() {
+        return this.autoSmeltEnabled;
+    }
+
+    public int getInitialPrepTimeSeconds() {
+        return initialPrepTimeSeconds;
     }
 }

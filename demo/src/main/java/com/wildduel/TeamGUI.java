@@ -37,7 +37,7 @@ public class TeamGUI {
 
         ItemStack leaveItem = new ItemStack(Material.BARRIER);
         ItemMeta leaveMeta = leaveItem.getItemMeta();
-        leaveMeta.setDisplayName("팀 나가기");
+        leaveMeta.setDisplayName("Leave Team");
         leaveItem.setItemMeta(leaveMeta);
         gui.setItem(8, leaveItem);
 

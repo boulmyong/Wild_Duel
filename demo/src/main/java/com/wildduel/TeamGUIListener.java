@@ -33,15 +33,15 @@ public class TeamGUIListener implements Listener {
 
         if (clickedItem.getType() == Material.BARRIER) {
             teamManager.leaveTeam(player);
-            player.sendMessage("팀에서 나왔습니다.");
+            player.sendMessage("You have left the team.");
             player.closeInventory();
             return;
         }
 
         if (clickedItem.getType().name().endsWith("_WOOL")) {
-            String teamName = ChatColor.stripColor(clickedItem.getItemMeta().getDisplayName()).replace(" 팀", "");
+            String teamName = ChatColor.stripColor(clickedItem.getItemMeta().getDisplayName()).replace(" Team", "");
             teamManager.joinTeam(player, teamName);
-            player.sendMessage(teamName + " 팀에 참가했습니다.");
+            player.sendMessage("You have joined the " + teamName + " team.");
             player.closeInventory();
         }
     }

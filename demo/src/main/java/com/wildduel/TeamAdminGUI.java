@@ -82,7 +82,7 @@ public class TeamAdminGUI {
     private ItemStack createTeamButton(TeamType teamType, TeamType selectedTeam) {
         ItemStack item = new ItemStack(getMaterialForTeam(teamType));
         ItemMeta meta = item.getItemMeta();
-        meta.setDisplayName(teamType.getColor() + teamType.getName() + " 팀");
+        meta.setDisplayName(teamType.getColor() + teamType.getName() + " Team");
         if (teamType == selectedTeam) {
             meta.addEnchant(Enchantment.PROTECTION, 1, true);
             meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);

@@ -1,12 +1,12 @@
 package com.wildduel;
 
+import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
+import org.bukkit.scoreboard.Scoreboard;
+import org.bukkit.scoreboard.Team;
 
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 public class TeamManager {
 
@@ -15,13 +15,21 @@ public class TeamManager {
 
     public TeamManager() {
         // Pre-defined teams
-        createTeam("레드", ChatColor.RED);
-        createTeam("블루", ChatColor.BLUE);
+        createTeam("Red", ChatColor.RED);
+        createTeam("Blue", ChatColor.BLUE);
     }
 
     public void createTeam(String name, ChatColor color) {
         if (!teams.containsKey(name)) {
             teams.put(name, new TeamData(name, color));
+            // Also create in scoreboard
+            Scoreboard scoreboard = Objects.requireNonNull(Bukkit.getScoreboardManager()).getMainScoreboard();
+            Team team = scoreboard.getTeam(name);
+            if (team == null) {
+                team = scoreboard.registerNewTeam(name);
+                team.setAllowFriendlyFire(false);
+                team.setColor(color);
+            }
         }
     }
 
@@ -52,8 +60,49 @@ public class TeamManager {
         return teams.get(teamName).getPlayers();
     }
 
+    public void assignRandomTeams() {
+        leaveAllTeams();
+        Player[] players = Bukkit.getOnlinePlayers().toArray(new Player[0]);
+        List<Player> playerList = new ArrayList<>(Arrays.asList(players));
+        Collections.shuffle(playerList);
+
+        List<String> teamNames = new ArrayList<>(teams.keySet());
+        int teamIndex = 0;
+
+        for (Player player : playerList) {
+            String teamName = teamNames.get(teamIndex);
+            joinTeam(player, teamName);
+            teamIndex = (teamIndex + 1) % teamNames.size();
+        }
+    }
+
+    public void leaveAllTeams() {
+        for (Player player : Bukkit.getOnlinePlayers()) {
+            leaveTeam(player);
+        }
+    }
+
     public Map<String, TeamData> getTeams() {
         return teams;
+    }
+
+    private void updatePlayerScoreboard(Player player, TeamData teamData) {
+        Scoreboard scoreboard = Objects.requireNonNull(Bukkit.getScoreboardManager()).getMainScoreboard();
+        Team team = scoreboard.getTeam(teamData.getName());
+        if (team == null) {
+            team = scoreboard.registerNewTeam(teamData.getName());
+            team.setAllowFriendlyFire(false);
+            team.setColor(teamData.getColor());
+        }
+        team.addEntry(player.getName());
+    }
+
+    private void removePlayerFromScoreboardTeam(Player player) {
+        Scoreboard scoreboard = Objects.requireNonNull(Bukkit.getScoreboardManager()).getMainScoreboard();
+        Team team = scoreboard.getEntryTeam(player.getName());
+        if (team != null) {
+            team.removeEntry(player.getName());
+        }
     }
 
     public static class TeamData {

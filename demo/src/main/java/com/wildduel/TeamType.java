@@ -3,10 +3,10 @@ package com.wildduel;
 import org.bukkit.ChatColor;
 
 public enum TeamType {
-    RED("레드", ChatColor.RED),
-    BLUE("블루", ChatColor.BLUE),
-    NONE("없음", ChatColor.WHITE),
-    SPECTATOR("관전자", ChatColor.GRAY);
+    RED("Red", ChatColor.RED),
+    BLUE("Blue", ChatColor.BLUE),
+    NONE("None", ChatColor.WHITE),
+    SPECTATOR("Spectator", ChatColor.GRAY);
 
     private final String name;
     private final ChatColor color;

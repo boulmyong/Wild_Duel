@@ -8,14 +8,14 @@ import org.bukkit.Sound;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitRunnable;
 
-import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class TpaManager {
 
-    private final Map<UUID, TpaRequest> pendingRequests = new HashMap<>();
-    private final Map<UUID, Long> cooldowns = new HashMap<>();
+    private final Map<UUID, TpaRequest> pendingRequests = new ConcurrentHashMap<>();
+    private final Map<UUID, Long> cooldowns = new ConcurrentHashMap<>();
     private final TeamManager teamManager;
     private final long COOLDOWN_SECONDS = 180;
     private final int TELEPORT_DELAY_SECONDS = 3;
