@@ -35,9 +35,6 @@ public class AdminGUIListener implements Listener {
         Player admin = (Player) event.getWhoClicked();
         ItemStack clickedItem = event.getCurrentItem();
 
-        // 2. Send a debug message to the admin.
-        admin.sendMessage("§e[DEBUG] Admin Panel click detected. Event cancelled.");
-
         if (clickedItem == null || clickedItem.getType() == Material.AIR) {
             return;
         }

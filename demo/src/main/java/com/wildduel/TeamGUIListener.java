@@ -30,9 +30,6 @@ public class TeamGUIListener implements Listener {
         Player player = (Player) event.getWhoClicked();
         ItemStack clickedItem = event.getCurrentItem();
 
-        // 2. Send a debug message.
-        player.sendMessage("§e[DEBUG] Team Select Panel click detected. Event cancelled.");
-
         if (clickedItem == null || clickedItem.getType() == Material.AIR) {
             return;
         }

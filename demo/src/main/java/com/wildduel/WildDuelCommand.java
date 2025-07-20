@@ -190,18 +190,13 @@ public class WildDuelCommand implements CommandExecutor {
     }
 
     private void sendHelpMessage(CommandSender sender) {
-        sender.sendMessage("--- 와일드 듀얼 명령어 목록 ---");
-        sender.sendMessage("/wd set - 월드의 기본 스폰 위치를 설정합니다.");
-        sender.sendMessage("/wd sp - 듀얼 시작 위치를 설정합니다.");
-        sender.sendMessage("/wd start - 게임을 시작합니다.");
-        sender.sendMessage("/wd preptime <초> - 시작 전 파밍 시간을 설정합니다.");
-        sender.sendMessage("/wd st <초> - 남은 파밍 시간을 변경합니다.");
-        sender.sendMessage("/wd team - 팀 관리 GUI를 엽니다.");
-        sender.sendMessage("/wd randomteam - 모든 플레이어를 랜덤으로 팀에 배정합니다.");
-        sender.sendMessage("/wd autosmelt <on|off> - 자동 제련 기능을 켜거나 끕니다.");
-        sender.sendMessage("/wd tparefresh <플레이어|all> - TPA 쿨타임을 초기화합니다.");
-        sender.sendMessage("/wd tpastatus <플레이어> - TPA 쿨타임 상태를 확인합니다.");
-        sender.sendMessage("/wd help - 도움말을 표시합니다.");
-        sender.sendMessage("/wd admin - 관리자 패널 GUI를 엽니다.");
+        sender.sendMessage("§a--- 와일드 듀얼 명령어 목록 ---");
+        sender.sendMessage("§e/wd admin §7- §f(추천) 모든 설정을 관리하는 GUI를 엽니다.");
+        sender.sendMessage("§e/wd start §7- §f게임을 즉시 시작합니다.");
+        sender.sendMessage("§e/wd randomteam §7- §f모든 플레이어를 랜덤 팀에 배정합니다.");
+        sender.sendMessage("§e/wd tparefresh <플레이어|all> §7- §fTPA 쿨타임을 초기화합니다.");
+        sender.sendMessage("§e/wd tpastatus <플레이어> §7- §fTPA 쿨타임 상태를 확인합니다.");
+        sender.sendMessage("§e/wd help §7- §f이 도움말을 표시합니다.");
+        sender.sendMessage("§7- 상세 설정(스폰, 파밍 시간 등)은 /wd admin 패널을 이용해주세요.");
     }
 }
