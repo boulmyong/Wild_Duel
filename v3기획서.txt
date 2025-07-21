@@ -1,0 +1,62 @@
+게임 상태 흐름: Wild Duel 상태 머신 정의
+
+[1] LOBBY 상태
+- 정의:
+  - /wd reset 직후 진입하는 기본 상태.
+  - 서버 시작 시 자동으로 world (기본 로비 월드)와 wildduel_world (게임 월드) 존재 여부 확인.
+    - 존재하지 않을 경우:
+      - world → 기본 월드로 유지
+      - wildduel_world → plugins/wildduel/ 안에 존재 여부 확인 후 없으면 생성:
+        - 바닥 1층 베드락, 나머지 빈 공간의 완전한 평지
+        - 이름: wildduel_world
+
+- 플레이어 스폰:
+  - 서버 접속시 모든 플레이어는 wildduel_world에 있는 로비로 스폰. 
+  - 이동 제한: 반경 50블록 이탈 불가 (Barrier 블럭)
+  - GameMode: Adventure
+  - 포화 효과 부여 (죽지 않도록)
+  - PvP는 켜져 있음 
+  - 블럭 설치/파괴/아이템 사용 불가능
+  - 사용 가능 명령어: /팀선택, /wd admin 등 관리 및 대기용 명령어만 허용
+
+- 관리자 작업:
+  - /wd admin으로 게임 설정
+  - 설정 완료 후 /wd start 명령어로 게임 시작
+
+
+[2] COUNTDOWN 상태
+- 정의:
+  - /wd start 입력 시 시작
+  - 10초 카운트다운 시작 (Tick 기반으로 구현)
+  - 전 플레이어에게 타이틀 메시지로 카운트 표시 
+  - 이동/행동 제한 유지 (GameMode: Adventure)
+
+
+[3] FARMING 상태
+- 정의:
+  - COUNTDOWN 완료 후 자동 진입
+  - 모든 플레이어 world의 스폰 위치로 순간이동 
+    - world 월드의 스폰 반경: 0 (고정 위치 스폰)
+    - 로비에서 world로 차원 이동 (wildduel_world → world)
+  - GameMode: Survival
+  - 채집/건축 가능
+  - 자동 제련 기능: 설정값에 따라 적용
+  - PvP 비활성화
+  - 포화 유지
+  - TPA 시스템 활성화 (같은 팀원끼리만)
+
+
+[4] BATTLE 상태
+- 정의:
+  - FARMING 시간이 끝난 후 자동 전환
+  - PvP 활성화
+  - 월드보더 시작
+  - GameMode: Survival 유지
+  - 자동 제련 기능 유지 (FARMING 상태와 동일)
+  - TPA 지속 허용 (같은 팀원끼리만)
+
+
+[5] ENDED 상태
+- 정의:
+  - 관리자가 수동 종료 시 진입
+  - /wd reset 명령어로 모든 플레이어를 wildduel_world 로비로 이동후 world삭제후 다시 생성(초기화)
