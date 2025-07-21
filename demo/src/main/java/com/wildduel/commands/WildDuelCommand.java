@@ -135,6 +135,9 @@ public class WildDuelCommand implements CommandExecutor {
         // 3. Create a new game world
         sender.sendMessage("§a[WD] 새로운 게임 월드를 생성합니다...");
         WorldCreator wc = new WorldCreator("world");
+        long randomSeed = new java.util.Random().nextLong();
+        wc.seed(randomSeed);
+        sender.sendMessage("§a[WD] 새로운 시드값으로 월드를 생성합니다: " + randomSeed);
         World newWorld = wc.createWorld();
         if (newWorld == null) {
             sender.sendMessage("§c[WD] 오류: 새로운 게임 월드를 생성하지 못했습니다!");
