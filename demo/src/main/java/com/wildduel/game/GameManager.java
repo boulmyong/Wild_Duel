@@ -128,32 +128,42 @@ public class GameManager {
     }
 
     private void transitionToFarming() {
-        WildDuel.getInstance().recreateGameWorld();
-        this.gameWorld = Bukkit.getWorld("wildduel_game");
-        gameState = GameState.FARMING;
-        this.prepTimeSeconds = this.initialPrepTimeSeconds;
-
-        gameWorld.setGameRule(GameRule.KEEP_INVENTORY, true);
-        gameWorld.setPVP(false);
-        WorldBorder border = gameWorld.getWorldBorder();
-        border.setCenter(gameWorld.getSpawnLocation());
-        border.setSize(1000);
-
-        applySaturationEffectPeriodically(gameWorld);
-
-        for (Player player : lobbyWorld.getPlayers()) {
-            teleportToCenter(player, gameWorld);
-            player.setGameMode(GameMode.SURVIVAL);
-            player.setExp(0F);
-            player.setLevel(0);
-            player.getInventory().clear();
-            for (PotionEffect effect : player.getActivePotionEffects()) {
-                player.removePotionEffect(effect.getType());
+        WildDuel.getInstance().recreateGameWorld(() -> {
+            // This code runs after the world has been recreated.
+            this.gameWorld = Bukkit.getWorld("wildduel_game");
+            if (this.gameWorld == null) {
+                Bukkit.broadcastMessage(ChatColor.RED + "Failed to create or load the game world. Aborting game start.");
+                resetGame();
+                return;
             }
-            WildDuel.getInstance().getDefaultStartInventory().apply(player);
-        }
 
-        startTimer();
+            gameState = GameState.FARMING;
+            this.prepTimeSeconds = this.initialPrepTimeSeconds;
+
+            gameWorld.setGameRule(GameRule.KEEP_INVENTORY, true);
+            gameWorld.setPVP(false);
+            WorldBorder border = gameWorld.getWorldBorder();
+            border.setCenter(gameWorld.getSpawnLocation());
+            border.setSize(1000);
+
+            applySaturationEffectPeriodically(gameWorld);
+
+            // Use a list of players to teleport to avoid ConcurrentModificationException
+            List<Player> playersToTeleport = new ArrayList<>(lobbyWorld.getPlayers());
+            for (Player player : playersToTeleport) {
+                teleportToCenter(player, gameWorld);
+                player.setGameMode(GameMode.SURVIVAL);
+                player.setExp(0F);
+                player.setLevel(0);
+                player.getInventory().clear();
+                for (PotionEffect effect : player.getActivePotionEffects()) {
+                    player.removePotionEffect(effect.getType());
+                }
+                WildDuel.getInstance().getDefaultStartInventory().apply(player);
+            }
+
+            startTimer();
+        });
     }
 
     private void teleportToCenter(Player player, World world) {
@@ -250,7 +260,7 @@ public class GameManager {
             @Override
             public void run() {
                 transitionToLobby();
-                WildDuel.getInstance().recreateGameWorld();
+                // No need to recreate world here anymore as it's handled before farming.
             }
         }.runTaskLater(WildDuel.getInstance(), 10 * 20);
     }

@@ -171,39 +171,58 @@ public class WildDuel extends JavaPlugin {
         }
     }
 
-    public void recreateGameWorld() {
+    public void recreateGameWorld(Runnable callback) {
         World gameWorld = Bukkit.getWorld("wildduel_game");
+        File worldFolder = (gameWorld != null) ? gameWorld.getWorldFolder() : new File(Bukkit.getWorldContainer(), "wildduel_game");
+
+        // Unload the world on the main thread
         if (gameWorld != null) {
-            File worldFolder = gameWorld.getWorldFolder();
             getLogger().info("Unloading world: " + gameWorld.getName());
-            boolean unloaded = Bukkit.unloadWorld(gameWorld, false);
-            if (unloaded) {
-                getLogger().info("World " + worldFolder.getName() + " unloaded successfully. Attempting to delete folder...");
-                if (deleteWorld(worldFolder)) {
+            if (!Bukkit.unloadWorld(gameWorld, false)) {
+                getLogger().warning("Failed to unload world: " + gameWorld.getName() + ". World deletion and creation will be aborted.");
+                // Optionally, run callback even if unload fails, or handle error differently
+                if (callback != null) {
+                    Bukkit.getScheduler().runTask(this, callback);
+                }
+                return;
+            }
+            getLogger().info("World " + worldFolder.getName() + " unloaded successfully.");
+        }
+
+        // Delete the world folder asynchronously
+        new org.bukkit.scheduler.BukkitRunnable() {
+            @Override
+            public void run() {
+                getLogger().info("Attempting to delete world folder asynchronously: " + worldFolder.getName());
+                boolean deleted = deleteWorld(worldFolder);
+                if (deleted) {
                     getLogger().info("World folder " + worldFolder.getName() + " deleted successfully.");
                 } else {
                     getLogger().warning("Failed to delete world folder: " + worldFolder.getName());
                 }
-            } else {
-                getLogger().warning("Failed to unload world: " + worldFolder.getName());
-            }
-        } else {
-            getLogger().info("'wildduel_game' not loaded, attempting to delete folder if it exists.");
-            File worldFolder = new File(Bukkit.getWorldContainer(), "wildduel_game");
-            if (worldFolder.exists()) {
-                if (deleteWorld(worldFolder)) {
-                    getLogger().info("Existing world folder 'wildduel_game' deleted successfully.");
-                } else {
-                    getLogger().warning("Failed to delete existing world folder 'wildduel_game'.");
-                }
-            }
-        }
 
-        getLogger().info("Creating new 'wildduel_game'...");
-        WorldCreator wc = new WorldCreator("wildduel_game");
-        wc.seed(new Random().nextLong());
-        wc.createWorld();
-        getLogger().info("New 'wildduel_game' created.");
+                // Create the new world back on the main thread
+                new org.bukkit.scheduler.BukkitRunnable() {
+                    @Override
+                    public void run() {
+                        getLogger().info("Creating new 'wildduel_game'...");
+                        WorldCreator wc = new WorldCreator("wildduel_game");
+                        wc.seed(new Random().nextLong());
+                        World newWorld = wc.createWorld();
+                        if (newWorld != null) {
+                            getLogger().info("New 'wildduel_game' created successfully.");
+                        } else {
+                            getLogger().severe("Failed to create new 'wildduel_game'.");
+                        }
+                        
+                        // Execute the callback if it exists
+                        if (callback != null) {
+                            callback.run();
+                        }
+                    }
+                }.runTask(WildDuel.getInstance());
+            }
+        }.runTaskAsynchronously(WildDuel.getInstance());
     }
 
     private boolean deleteWorld(File path) {

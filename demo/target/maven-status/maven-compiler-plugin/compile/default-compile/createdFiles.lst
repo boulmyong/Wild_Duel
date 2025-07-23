@@ -24,8 +24,10 @@ com\wildduel\gui\AdminGUI.class
 com\wildduel\commands\TpaCommand.class
 com\wildduel\gui\TeamGUI.class
 com\wildduel\gui\TeamAdminGUI.class
+com\wildduel\WildDuel$1$1.class
 com\wildduel\game\TeamManager.class
 com\wildduel\listeners\AdminGUIListener.class
+com\wildduel\WildDuel$1.class
 com\wildduel\game\GameManager.class
 com\wildduel\game\TeamManager$TeamData.class
 com\wildduel\game\TpaManager$2.class

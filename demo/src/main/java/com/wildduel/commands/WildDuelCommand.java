@@ -120,12 +120,12 @@ public class WildDuelCommand implements CommandExecutor {
 
         // 3. Recreate the game world using the centralized method
         // This correctly targets 'wildduel_game' and handles unload/delete/create
-        WildDuel.getInstance().recreateGameWorld();
-
-        // 4. Finalize and notify
-        gameManager.initializeWorlds(); // Re-initialize world references in GameManager
-        Bukkit.broadcastMessage("§6✅ 게임과 월드가 성공적으로 초기화되었습니다!");
-        sender.sendMessage("§b[WD] 초기화 완료.");
+        WildDuel.getInstance().recreateGameWorld(() -> {
+            // 4. Finalize and notify
+            gameManager.initializeWorlds(); // Re-initialize world references in GameManager
+            Bukkit.broadcastMessage("§6✅ 게임과 월드가 성공적으로 초기화되었습니다!");
+            sender.sendMessage("§b[WD] 초기화 완료.");
+        });
     }
 
     private void deleteWorldFolder(java.io.File path) throws Exception {
