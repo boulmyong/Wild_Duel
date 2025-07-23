@@ -11,7 +11,7 @@ import java.util.List;
 
 public class WildDuelTabCompleter implements TabCompleter {
 
-    private static final String[] COMMANDS = { "help", "start", "reset", "team", "randomteam", "admin", "autosmelt", "tparefresh", "tpastatus", "st" };
+    private static final String[] COMMANDS = { "help", "start", "reset", "team", "randomteam", "admin", "autosmelt", "tparefresh", "tpastatus", "st", "setinventory" };
 
     @Override
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {

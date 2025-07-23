@@ -23,6 +23,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Random;
+import org.bukkit.ChatColor;
+import net.md_5.bungee.api.ChatMessageType;
+import net.md_5.bungee.api.chat.TextComponent;
 
 public class GameManager {
 
@@ -36,6 +39,7 @@ public class GameManager {
     private int prepTimeSeconds;
     private BukkitRunnable gameTask;
     private BukkitRunnable saturationTask;
+    private BukkitRunnable distanceDisplayTask;
 
     private boolean autoSmeltEnabled = false;
     private boolean playerTeamSelectionEnabled = false;
@@ -46,10 +50,12 @@ public class GameManager {
 
     public void initializeWorlds() {
         this.lobbyWorld = Bukkit.getWorld("wildduel_world");
-        this.gameWorld = Bukkit.getWorld("world"); // Default world
+        this.gameWorld = Bukkit.getWorld("wildduel_game"); // Default world
         if (lobbyWorld != null) {
             lobbyWorld.setGameRule(GameRule.DO_DAYLIGHT_CYCLE, false);
             lobbyWorld.setGameRule(GameRule.DO_WEATHER_CYCLE, false);
+            lobbyWorld.setTime(6000L);
+            lobbyWorld.setStorm(false);
             lobbyWorld.setPVP(true);
         }
         transitionToLobby();
@@ -66,7 +72,7 @@ public class GameManager {
     public void preparePlayerForLobby(Player player) {
         Location spawnPoint = lobbyWorld.getSpawnLocation().clone().add(0.5, 0, 0.5);
         player.teleport(spawnPoint);
-        player.setGameMode(GameMode.SURVIVAL); // Changed from ADVENTURE
+        player.setGameMode(GameMode.ADVENTURE);
         player.getInventory().clear();
         player.setHealth(20.0);
         player.setFoodLevel(20);
@@ -122,6 +128,8 @@ public class GameManager {
     }
 
     private void transitionToFarming() {
+        WildDuel.getInstance().recreateGameWorld();
+        this.gameWorld = Bukkit.getWorld("wildduel_game");
         gameState = GameState.FARMING;
         this.prepTimeSeconds = this.initialPrepTimeSeconds;
 
@@ -134,23 +142,25 @@ public class GameManager {
         applySaturationEffectPeriodically(gameWorld);
 
         for (Player player : lobbyWorld.getPlayers()) {
-            teleportToRandomLocation(player, gameWorld);
+            teleportToCenter(player, gameWorld);
             player.setGameMode(GameMode.SURVIVAL);
-            player.getInventory().addItem(new ItemStack(Material.STONE_AXE));
-            player.getInventory().addItem(new ItemStack(Material.STONE_PICKAXE));
+            player.setExp(0F);
+            player.setLevel(0);
+            player.getInventory().clear();
+            for (PotionEffect effect : player.getActivePotionEffects()) {
+                player.removePotionEffect(effect.getType());
+            }
+            WildDuel.getInstance().getDefaultStartInventory().apply(player);
         }
 
         startTimer();
     }
 
-    private void teleportToRandomLocation(Player player, World world) {
-        Random random = new Random();
+    private void teleportToCenter(Player player, World world) {
         WorldBorder border = world.getWorldBorder();
-        double size = border.getSize() / 2 - 50; // Buffer from the edge
-        double x = border.getCenter().getX() + (random.nextDouble() * 2 - 1) * size;
-        double z = border.getCenter().getZ() + (random.nextDouble() * 2 - 1) * size;
-        int y = world.getHighestBlockYAt((int)x, (int)z) + 1;
-        player.teleport(new Location(world, x, y, z));
+        Location center = border.getCenter();
+        int y = world.getHighestBlockYAt(center.getBlockX(), center.getBlockZ()) + 1;
+        player.teleport(new Location(world, center.getX(), y, center.getZ()));
     }
 
     private void startTimer() {
@@ -193,6 +203,8 @@ public class GameManager {
         WorldBorder border = gameWorld.getWorldBorder();
         border.setSize(100, 60 * 10); // Shrink over 10 minutes
 
+        startDistanceDisplay();
+
         if (timerBar != null) {
             timerBar.removeAll();
             timerBar.setVisible(false);
@@ -231,16 +243,14 @@ public class GameManager {
 
         if (gameTask != null) gameTask.cancel();
         if (timerBar != null) timerBar.removeAll();
+        if (distanceDisplayTask != null) distanceDisplayTask.cancel();
 
         // After a 10-second delay, teleport everyone back to the lobby and prepare them
         new BukkitRunnable() {
             @Override
             public void run() {
-                for (Player player : Bukkit.getOnlinePlayers()) {
-                    preparePlayerForLobby(player);
-                }
-                // After moving players, fully transition to LOBBY state
                 transitionToLobby();
+                WildDuel.getInstance().recreateGameWorld();
             }
         }.runTaskLater(WildDuel.getInstance(), 10 * 20);
     }
@@ -249,6 +259,7 @@ public class GameManager {
         if (gameTask != null) gameTask.cancel();
         if (saturationTask != null) saturationTask.cancel();
         if (timerBar != null) timerBar.removeAll();
+        if (distanceDisplayTask != null) distanceDisplayTask.cancel();
 
         gameState = GameState.LOBBY;
         autoSmeltEnabled = false;
@@ -266,6 +277,7 @@ public class GameManager {
     // Getters and Setters
     public GameState getGameState() { return gameState; }
     public World getLobbyWorld() { return lobbyWorld; }
+    public World getGameWorld() { return gameWorld; }
     public boolean isAutoSmeltEnabled() { return autoSmeltEnabled; }
     public void setAutoSmelt(boolean autoSmeltEnabled) { this.autoSmeltEnabled = autoSmeltEnabled; }
     public boolean isPlayerTeamSelectionEnabled() { return playerTeamSelectionEnabled; }
@@ -288,5 +300,32 @@ public class GameManager {
 
     private String formatTime(int seconds) {
         return String.format("%02d:%02d", seconds / 60, seconds % 60);
+    }
+
+    private void startDistanceDisplay() {
+        distanceDisplayTask = new BukkitRunnable() {
+            @Override
+            public void run() {
+                if (gameState != GameState.BATTLE) {
+                    this.cancel();
+                    return;
+                }
+                WorldBorder border = gameWorld.getWorldBorder();
+                Location center = border.getCenter();
+                for (Player player : gameWorld.getPlayers()) {
+                    player.spigot().sendMessage(ChatMessageType.ACTION_BAR, new TextComponent(ChatColor.YELLOW + "중앙 좌표: " + ChatColor.WHITE + String.format("X: %.0f, Z: %.0f", center.getX(), center.getZ())));
+                }
+            }
+        };
+        distanceDisplayTask.runTaskTimer(WildDuel.getInstance(), 0, 20); // Every second
+    }
+
+    public void handlePlayerQuit(Player player) {
+        // The TeamManager handles removing the player from their team.
+        // We just need to check if the game should end.
+        if (gameState == GameState.BATTLE || gameState == GameState.FARMING) {
+            // Run win condition check on the next tick to ensure player is fully gone
+            Bukkit.getScheduler().runTask(WildDuel.getInstance(), this::checkWinCondition);
+        }
     }
 }

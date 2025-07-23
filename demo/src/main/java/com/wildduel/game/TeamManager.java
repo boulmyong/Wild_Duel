@@ -139,6 +139,10 @@ public class TeamManager {
         }
     }
 
+    public void handlePlayerQuit(Player player) {
+        leaveTeam(player);
+    }
+
     public static class TeamData {
         private final String name;
         private final ChatColor color;

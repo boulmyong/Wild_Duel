@@ -1,0 +1,10 @@
+# WildDuel Plugin Configuration
+
+tpa-request-timeout: 60
+tpa-cooldown-seconds: 180
+
+default-start-items:
+  - material: STONE_AXE
+    amount: 1
+  - material: STONE_PICKAXE
+    amount: 1

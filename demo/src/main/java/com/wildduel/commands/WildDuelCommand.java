@@ -6,6 +6,8 @@ import com.wildduel.game.GameManager;
 import com.wildduel.game.TeamManager;
 import com.wildduel.game.TpaManager;
 import com.wildduel.game.TeamAdminManager;
+import com.wildduel.gui.StartItemGUI;
+import com.wildduel.WildDuel;
 
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
@@ -15,6 +17,8 @@ import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
+import org.bukkit.Material;
+import org.bukkit.inventory.ItemStack;
 
 public class WildDuelCommand implements CommandExecutor {
 
@@ -57,6 +61,7 @@ public class WildDuelCommand implements CommandExecutor {
             case "randomteam":
             case "admin":
             case "autosmelt":
+            case "setinventory":
                 handlePlayerCommands(sender, args);
                 break;
             case "reset":
@@ -102,47 +107,20 @@ public class WildDuelCommand implements CommandExecutor {
         teamManager.resetTeams();
         tpaManager.resetTpa();
 
-        // 2. Handle the game world (world) regeneration
-        World gameWorld = Bukkit.getWorld("world");
-        if (gameWorld != null) {
-            sender.sendMessage("§a[WD] 모든 플레이어를 로비로 이동시킵니다...");
-            World lobbyWorld = Bukkit.getWorld("wildduel_world");
-            if (lobbyWorld == null) {
-                sender.sendMessage("§c[WD] 치명적 오류: 로비 월드를 찾을 수 없습니다! 초기화를 중단합니다.");
-                return;
-            }
-            // Evacuate all online players to the lobby
-            for (Player player : Bukkit.getOnlinePlayers()) {
-                player.teleport(lobbyWorld.getSpawnLocation());
-            }
-
-            sender.sendMessage("§a[WD] 게임 월드 '" + gameWorld.getName() + "'를 언로드합니다...");
-            if (!Bukkit.unloadWorld(gameWorld, false)) {
-                sender.sendMessage("§c[WD] 오류: 게임 월드를 언로드할 수 없습니다.");
-                // We can still try to delete and recreate it.
-            }
-
-            sender.sendMessage("§a[WD] 게임 월드 폴더를 삭제합니다...");
-            try {
-                deleteWorldFolder(gameWorld.getWorldFolder());
-            } catch (Exception e) {
-                sender.sendMessage("§c[WD] 오류: 월드 폴더를 삭제하지 못했습니다. 파일 권한을 확인하거나 수동으로 삭제해주세요.");
-                e.printStackTrace();
-                return;
-            }
-        }
-
-        // 3. Create a new game world
-        sender.sendMessage("§a[WD] 새로운 게임 월드를 생성합니다...");
-        WorldCreator wc = new WorldCreator("world");
-        long randomSeed = new java.util.Random().nextLong();
-        wc.seed(randomSeed);
-        sender.sendMessage("§a[WD] 새로운 시드값으로 월드를 생성합니다: " + randomSeed);
-        World newWorld = wc.createWorld();
-        if (newWorld == null) {
-            sender.sendMessage("§c[WD] 오류: 새로운 게임 월드를 생성하지 못했습니다!");
+        // 2. Evacuate players before touching worlds
+        sender.sendMessage("§a[WD] 모든 플레이어를 로비로 이동시킵니다...");
+        World lobbyWorld = Bukkit.getWorld("wildduel_world");
+        if (lobbyWorld == null) {
+            sender.sendMessage("§c[WD] 치명적 오류: 로비 월드를 찾을 수 없습니다! 초기화를 중단합니다.");
             return;
         }
+        for (Player player : Bukkit.getOnlinePlayers()) {
+            player.teleport(lobbyWorld.getSpawnLocation());
+        }
+
+        // 3. Recreate the game world using the centralized method
+        // This correctly targets 'wildduel_game' and handles unload/delete/create
+        WildDuel.getInstance().recreateGameWorld();
 
         // 4. Finalize and notify
         gameManager.initializeWorlds(); // Re-initialize world references in GameManager
@@ -238,6 +216,14 @@ public class WildDuelCommand implements CommandExecutor {
                     sender.sendMessage("Usage: /wd autosmelt <on|off>");
                 }
                 break;
+            case "setinventory":
+                if (!player.isOp() && !player.hasPermission("wildduel.admin")) {
+                    player.sendMessage("§c이 명령어를 사용할 권한이 없습니다.");
+                    return;
+                }
+                new StartItemGUI(WildDuel.getInstance().getDefaultStartInventory()).open(player);
+                player.sendMessage("§a시작 아이템 설정 GUI를 엽니다.");
+                break;
         }
     }
 
@@ -293,12 +279,17 @@ public class WildDuelCommand implements CommandExecutor {
 
     private void sendHelpMessage(CommandSender sender) {
         sender.sendMessage("§a--- 와일드 듀얼 명령어 목록 ---");
-        sender.sendMessage("§e/wd admin §7- §f(추천) 모든 설정을 관리하는 GUI를 엽니다.");
-        sender.sendMessage("§e/wd start §7- §f게임을 즉시 시작합니다.");
-        sender.sendMessage("§e/wd randomteam §7- §f모든 플레이어를 랜덤 팀에 배정합니다.");
-        sender.sendMessage("§e/wd tparefresh <플레이어|all> §7- §fTPA 쿨타임을 초기화합니다.");
-        sender.sendMessage("§e/wd tpastatus <플레이어> §7- §fTPA 쿨타임 상태를 확인합니다.");
         sender.sendMessage("§e/wd help §7- §f이 도움말을 표시합니다.");
+        sender.sendMessage("§e/wd admin §7- §f(추천) 모든 설정을 관리하는 GUI를 엽니다.");
+        sender.sendMessage("§e/wd setinventory §7- §f(추천) GUI를 통해 시작 아이템 인벤토리를 설정합니다.");
+        sender.sendMessage("§e/wd start §7- §f게임을 즉시 시작합니다.");
+        sender.sendMessage("§e/wd team §7- §f팀 관리 GUI를 엽니다.");
+        sender.sendMessage("§e/wd randomteam §7- §f모든 플레이어를 랜덤 팀에 배정합니다.");
+        sender.sendMessage("§e/wd st <seconds> §7- §f파밍 시간을 조절합니다 (양수/음수 가능).");
+        sender.sendMessage("§e/wd autosmelt <on|off> §7- §f자동 제련 기능을 켜거나 끕니다.");
+        sender.sendMessage("§e/wd reset [confirm] §7- §f게임과 월드를 초기화합니다. (confirm 필요)");
+        sender.sendMessage("§e/wd tparefresh <player|all> §7- §fTPA 쿨타임을 초기화합니다.");
+        sender.sendMessage("§e/wd tpastatus <player> §7- §fTPA 쿨타임 상태를 확인합니다.");
         sender.sendMessage("§7- 상세 설정(스폰, 파밍 시간 등)은 /wd admin 패널을 이용해주세요.");
     }
 }

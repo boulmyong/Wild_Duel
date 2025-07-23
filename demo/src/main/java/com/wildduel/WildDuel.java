@@ -15,6 +15,28 @@ import org.bukkit.Bukkit;
 import org.bukkit.World;
 import org.bukkit.WorldCreator;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.configuration.ConfigurationSection;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.Material;
+
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Random;
+import java.util.logging.Level;
+import com.wildduel.util.PlayerInventorySnapshot;
+import com.wildduel.listeners.StartItemGUIListener;
+import org.bukkit.configuration.file.YamlConfiguration;
+
+import java.io.InputStreamReader;
+import java.io.Reader;
+import java.nio.charset.StandardCharsets;
+import org.bukkit.ChatColor;
 
 public class WildDuel extends JavaPlugin {
 
@@ -23,10 +45,18 @@ public class WildDuel extends JavaPlugin {
     private TeamManager teamManager;
     private TeamAdminManager teamAdminManager;
     private TpaManager tpaManager;
+    private List<ItemStack> defaultStartItems = new ArrayList<>();
+    private PlayerInventorySnapshot defaultStartInventory;
+    private FileConfiguration messagesConfig;
 
     @Override
     public void onEnable() {
         instance = this;
+
+        saveDefaultConfig();
+        loadMessages();
+        loadDefaultStartItems();
+        loadDefaultStartInventory();
 
         // Create lobby world if it doesn't exist
         createLobbyWorld();
@@ -54,6 +84,7 @@ public class WildDuel extends JavaPlugin {
         getServer().getPluginManager().registerEvents(new TpaListener(tpaManager), this);
         getServer().getPluginManager().registerEvents(new AdminGUIListener(gameManager, teamManager, tpaManager, teamAdminManager), this);
         getServer().getPluginManager().registerEvents(new TeamGUIListener(teamManager), this);
+        getServer().getPluginManager().registerEvents(new StartItemGUIListener(this), this);
         getLogger().info("WildDuel plugin enabled!");
     }
 
@@ -82,5 +113,164 @@ public class WildDuel extends JavaPlugin {
 
     public GameManager getGameManager() {
         return gameManager;
+    }
+
+    public TpaManager getTpaManager() {
+        return tpaManager;
+    }
+
+    public List<ItemStack> getDefaultStartItems() {
+        return defaultStartItems;
+    }
+
+    public void addDefaultStartItem(ItemStack item) {
+        defaultStartItems.add(item);
+        saveDefaultStartItems();
+    }
+
+    public void removeDefaultStartItem(ItemStack item) {
+        // Remove by material type for simplicity, or could match exact item meta
+        defaultStartItems.removeIf(i -> i.getType() == item.getType());
+        saveDefaultStartItems();
+    }
+
+    private void saveDefaultStartItems() {
+        List<java.util.Map<String, Object>> serializedItems = new ArrayList<>();
+        for (ItemStack item : defaultStartItems) {
+            java.util.Map<String, Object> itemMap = new java.util.HashMap<>();
+            itemMap.put("material", item.getType().name());
+            itemMap.put("amount", item.getAmount());
+            // Add more item meta if needed (e.g., enchantments, display name)
+            serializedItems.add(itemMap);
+        }
+        getConfig().set("default-start-items", serializedItems);
+        saveConfig();
+    }
+
+    private void loadDefaultStartItems() {
+        FileConfiguration config = getConfig();
+        if (config.isList("default-start-items")) {
+            List<?> items = config.getList("default-start-items");
+            for (Object itemObj : items) {
+                if (itemObj instanceof java.util.Map) {
+                    java.util.Map<String, Object> itemMap = (java.util.Map<String, Object>) itemObj;
+                    String materialName = (String) itemMap.get("material");
+                    int amount = (Integer) itemMap.getOrDefault("amount", 1);
+                    if (materialName != null) {
+                        Material material = Material.getMaterial(materialName.toUpperCase());
+                        if (material != null) {
+                            defaultStartItems.add(new ItemStack(material, amount));
+                        } else {
+                            getLogger().warning("Unknown material: " + materialName);
+                        }
+                    }
+                }
+            }
+        } else {
+            getLogger().warning("default-start-items section not found or invalid in config.yml");
+        }
+    }
+
+    public void recreateGameWorld() {
+        World gameWorld = Bukkit.getWorld("wildduel_game");
+        if (gameWorld != null) {
+            File worldFolder = gameWorld.getWorldFolder();
+            getLogger().info("Unloading world: " + gameWorld.getName());
+            boolean unloaded = Bukkit.unloadWorld(gameWorld, false);
+            if (unloaded) {
+                getLogger().info("World " + worldFolder.getName() + " unloaded successfully. Attempting to delete folder...");
+                if (deleteWorld(worldFolder)) {
+                    getLogger().info("World folder " + worldFolder.getName() + " deleted successfully.");
+                } else {
+                    getLogger().warning("Failed to delete world folder: " + worldFolder.getName());
+                }
+            } else {
+                getLogger().warning("Failed to unload world: " + worldFolder.getName());
+            }
+        } else {
+            getLogger().info("'wildduel_game' not loaded, attempting to delete folder if it exists.");
+            File worldFolder = new File(Bukkit.getWorldContainer(), "wildduel_game");
+            if (worldFolder.exists()) {
+                if (deleteWorld(worldFolder)) {
+                    getLogger().info("Existing world folder 'wildduel_game' deleted successfully.");
+                } else {
+                    getLogger().warning("Failed to delete existing world folder 'wildduel_game'.");
+                }
+            }
+        }
+
+        getLogger().info("Creating new 'wildduel_game'...");
+        WorldCreator wc = new WorldCreator("wildduel_game");
+        wc.seed(new Random().nextLong());
+        wc.createWorld();
+        getLogger().info("New 'wildduel_game' created.");
+    }
+
+    private boolean deleteWorld(File path) {
+        if (path.exists()) {
+            File[] files = path.listFiles();
+            if (files != null) {
+                for (File file : files) {
+                    if (file.isDirectory()) {
+                        deleteWorld(file);
+                    } else {
+                        file.delete();
+                    }
+                }
+            }
+        }
+        return path.delete();
+    }
+
+    public PlayerInventorySnapshot getDefaultStartInventory() {
+        return defaultStartInventory;
+    }
+
+    public void setDefaultStartInventory(PlayerInventorySnapshot snapshot) {
+        this.defaultStartInventory = snapshot;
+        saveDefaultStartInventory();
+    }
+
+    private void loadDefaultStartInventory() {
+        ConfigurationSection section = getConfig().getConfigurationSection("default-start-inventory");
+        if (section != null) {
+            defaultStartInventory = PlayerInventorySnapshot.deserialize(section);
+        } else {
+            defaultStartInventory = new PlayerInventorySnapshot(); // Default empty snapshot
+        }
+    }
+
+    private void saveDefaultStartInventory() {
+        ConfigurationSection section = getConfig().createSection("default-start-inventory");
+        defaultStartInventory.serialize(section);
+        saveConfig();
+    }
+
+    public void loadMessages() {
+        File messagesFile = new File(getDataFolder(), "messages.yml");
+        if (!messagesFile.exists()) {
+            saveResource("messages.yml", false);
+        }
+        messagesConfig = YamlConfiguration.loadConfiguration(messagesFile);
+        // Load default messages from JAR
+        Reader defConfigStream = new InputStreamReader(this.getResource("messages.yml"), StandardCharsets.UTF_8);
+        if (defConfigStream != null) {
+            YamlConfiguration defConfig = YamlConfiguration.loadConfiguration(defConfigStream);
+            messagesConfig.setDefaults(defConfig);
+        }
+    }
+
+    public String getMessage(String key) {
+        return ChatColor.translateAlternateColorCodes('&', messagesConfig.getString(key, "&cMissing message: " + key));
+    }
+
+    public String getMessage(String key, String... replacements) {
+        String message = getMessage(key);
+        for (int i = 0; i < replacements.length; i += 2) {
+            if (i + 1 < replacements.length) {
+                message = message.replace(replacements[i], replacements[i+1]);
+            }
+        }
+        return message;
     }
 }

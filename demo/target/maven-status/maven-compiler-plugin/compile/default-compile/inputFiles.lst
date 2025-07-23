@@ -1,11 +1,12 @@
-C:\Users\user0\Desktop\Wild_Duel\demo\src\main\java\com\wildduel\commands\PlayerTeamCommand.java
 C:\Users\user0\Desktop\Wild_Duel\demo\src\main\java\com\wildduel\listeners\TpaListener.java
 C:\Users\user0\Desktop\Wild_Duel\demo\src\main\java\com\wildduel\listeners\TeamGUIListener.java
 C:\Users\user0\Desktop\Wild_Duel\demo\src\main\java\com\wildduel\WildDuel.java
+C:\Users\user0\Desktop\Wild_Duel\demo\src\main\java\com\wildduel\gui\StartItemGUI.java
 C:\Users\user0\Desktop\Wild_Duel\demo\src\main\java\com\wildduel\game\TpaManager.java
 C:\Users\user0\Desktop\Wild_Duel\demo\src\main\java\com\wildduel\listeners\AdminGUIListener.java
 C:\Users\user0\Desktop\Wild_Duel\demo\src\main\java\com\wildduel\listeners\PlayerEventListener.java
 C:\Users\user0\Desktop\Wild_Duel\demo\src\main\java\com\wildduel\util\EmptyWorldGenerator.java
+C:\Users\user0\Desktop\Wild_Duel\demo\src\main\java\com\wildduel\util\PlayerInventorySnapshot.java
 C:\Users\user0\Desktop\Wild_Duel\demo\src\main\java\com\wildduel\gui\AdminGUI.java
 C:\Users\user0\Desktop\Wild_Duel\demo\src\main\java\com\wildduel\commands\WildDuelTabCompleter.java
 C:\Users\user0\Desktop\Wild_Duel\demo\src\main\java\com\wildduel\commands\TpaCommand.java
@@ -20,8 +21,8 @@ C:\Users\user0\Desktop\Wild_Duel\demo\src\main\java\com\wildduel\game\TeamManage
 C:\Users\user0\Desktop\Wild_Duel\demo\src\main\java\com\wildduel\commands\WildDuelCommand.java
 C:\Users\user0\Desktop\Wild_Duel\demo\src\main\java\com\wildduel\game\TpaRequest.java
 C:\Users\user0\Desktop\Wild_Duel\demo\src\main\java\com\wildduel\commands\TpaStatusCommand.java
-C:\Users\user0\Desktop\Wild_Duel\demo\src\main\java\com\wildduel\commands\TeamCommand.java
 C:\Users\user0\Desktop\Wild_Duel\demo\src\main\java\com\wildduel\gui\TeamGUI.java
 C:\Users\user0\Desktop\Wild_Duel\demo\src\main\java\com\wildduel\game\GameState.java
 C:\Users\user0\Desktop\Wild_Duel\demo\src\main\java\com\wildduel\game\TeamAdminManager.java
 C:\Users\user0\Desktop\Wild_Duel\demo\src\main\java\com\wildduel\commands\TpaCancelCommand.java
+C:\Users\user0\Desktop\Wild_Duel\demo\src\main\java\com\wildduel\listeners\StartItemGUIListener.java

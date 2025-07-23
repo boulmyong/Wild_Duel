@@ -8,12 +8,6 @@ import org.bukkit.Location;
 import org.bukkit.Sound;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitRunnable;
-import net.md_5.bungee.api.chat.TextComponent;
-import org.bukkit.Bukkit;
-import org.bukkit.Location;
-import org.bukkit.Sound;
-import org.bukkit.entity.Player;
-import org.bukkit.scheduler.BukkitRunnable;
 
 import java.util.Map;
 import java.util.UUID;
@@ -24,11 +18,14 @@ public class TpaManager {
     private final Map<UUID, TpaRequest> pendingRequests = new ConcurrentHashMap<>();
     private final Map<UUID, Long> cooldowns = new ConcurrentHashMap<>();
     private final TeamManager teamManager;
-    private final long COOLDOWN_SECONDS = 180;
+    private final long cooldownSeconds;
     private final int TELEPORT_DELAY_SECONDS = 3;
+    private final long tpaTimeout;
 
     public TpaManager(TeamManager teamManager) {
         this.teamManager = teamManager;
+        this.tpaTimeout = WildDuel.getInstance().getConfig().getLong("tpa-request-timeout", 60);
+        this.cooldownSeconds = WildDuel.getInstance().getConfig().getLong("tpa-cooldown-seconds", 180);
     }
 
     public void requestTpa(Player requester, Player target) {
@@ -38,8 +35,8 @@ public class TpaManager {
             return;
         }
 
-        if (cooldowns.containsKey(requester.getUniqueId()) && System.currentTimeMillis() - cooldowns.get(requester.getUniqueId()) < COOLDOWN_SECONDS * 1000) {
-            long remaining = (cooldowns.get(requester.getUniqueId()) + COOLDOWN_SECONDS * 1000 - System.currentTimeMillis()) / 1000;
+        if (cooldowns.containsKey(requester.getUniqueId()) && System.currentTimeMillis() - cooldowns.get(requester.getUniqueId()) < cooldownSeconds * 1000) {
+            long remaining = (cooldowns.get(requester.getUniqueId()) + cooldownSeconds * 1000 - System.currentTimeMillis()) / 1000;
             requester.sendMessage("§cTPA 쿨타임이 " + remaining + "초 남았습니다.");
             return;
         }
@@ -65,7 +62,7 @@ public class TpaManager {
         message.addExtra(deny);
         target.spigot().sendMessage(message);
 
-        // Auto-cancel after 30 seconds
+        // Auto-cancel after timeout
         new BukkitRunnable() {
             @Override
             public void run() {
@@ -75,7 +72,7 @@ public class TpaManager {
                     target.sendMessage("§c" + requester.getName() + "님의 TPA 요청이 시간 초과로 취소되었습니다.");
                 }
             }
-        }.runTaskLater(WildDuel.getInstance(), 30 * 20);
+        }.runTaskLater(WildDuel.getInstance(), tpaTimeout * 20);
     }
 
     public void handleResponse(Player target, String requesterName, boolean accepted) {
@@ -171,9 +168,32 @@ public class TpaManager {
             return 0;
         }
         long timeElapsed = System.currentTimeMillis() - cooldowns.get(player.getUniqueId());
-        if (timeElapsed >= COOLDOWN_SECONDS * 1000) {
+        if (timeElapsed >= cooldownSeconds * 1000) {
             return 0;
         }
-        return (COOLDOWN_SECONDS * 1000 - timeElapsed) / 1000;
+        return (cooldownSeconds * 1000 - timeElapsed) / 1000;
+    }
+
+    public void handlePlayerQuit(Player player) {
+        UUID playerId = player.getUniqueId();
+
+        // Cancel requests sent BY the player
+        if (pendingRequests.containsKey(playerId)) {
+            TpaRequest request = pendingRequests.get(playerId);
+            Player target = Bukkit.getPlayer(request.getTarget());
+            cancelTpa(player, target, false); // false for not manual
+        }
+
+        // Cancel requests sent TO the player
+        pendingRequests.values().stream()
+                .filter(req -> req.getTarget().equals(playerId))
+                .findFirst()
+                .ifPresent(request -> {
+                    Player requester = Bukkit.getPlayer(request.getRequester());
+                    if (requester != null) {
+                        cancelTpa(requester, player, false);
+                        requester.sendMessage("§c" + player.getName() + "님이 오프라인 상태가 되어 TPA 요청이 취소되었습니다.");
+                    }
+                });
     }
 }

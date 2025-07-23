@@ -1,11 +1,11 @@
 name: WildDuel
-version: 1.0
+version: 3.1
 main: com.wildduel.WildDuel
 api-version: 1.21
 commands:
   wd:
-    description: Wild Duel command.
-    usage: /wd <set|sp|start|ts>
+    description: 와일드 듀얼 메인 명령어입니다. /wd help로 모든 명령어를 확인하세요.
+    usage: /wd <help|admin|start|team|...>
   tpa:
     description: Request to teleport to a team member.
     usage: /tpa <player>
