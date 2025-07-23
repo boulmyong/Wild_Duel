@@ -53,6 +53,6 @@ Wild Duel은 두 팀으로 나뉘어 정해진 시간 동안 자원을 파밍하
 
 ## 🛠️ 설치
 
-1.  [wildduel-3.1.jar]() 파일을 찾습니다.
+1.  [wildduel-3.1.jar](https://github.com/boulmyong/Wild_Duel/releases/download/v3.1/wildduel-3.1.jar) 파일을 다운로드 합니다.
 2.  해당 파일을 Spigot/Paper 서버의 `plugins/` 폴더에 넣습니다.
 3.  서버를 재시작합니다.
