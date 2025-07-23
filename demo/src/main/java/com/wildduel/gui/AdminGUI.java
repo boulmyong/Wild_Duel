@@ -45,10 +45,10 @@ public class AdminGUI {
         gui.setItem(7, createButton(Material.BARRIER, "§c게임 초기화 (정보)", "월드를 초기화하려면", "§e/wd reset confirm §c을 입력하세요."));
 
         // --- Row 2: Settings & Management ---
-        gui.setItem(10, createButton(Material.WRITABLE_BOOK, "§7팀 자율 선택: " + (gameManager.isPlayerTeamSelectionEnabled() ? "§a허용" : "§c차단"), "클릭하여 토글합니다."));
-        gui.setItem(12, createButton(Material.FURNACE, "§7자동 제련: " + (gameManager.isAutoSmeltEnabled() ? "§a켜짐" : "§c꺼짐"), "클릭하여 토글합니다."));
-        gui.setItem(14, createButton(Material.PLAYER_HEAD, "§6수동 팀 배정", "팀 관리 GUI를 엽니다."));
-        gui.setItem(16, createButton(Material.ENDER_PEARL, "§dTPA 쿨타임 초기화", "모든 플레이어의 TPA 쿨타임을 초기화합니다."));
+        gui.setItem(10, createButton(Material.WRITABLE_BOOK, "§7팀 자율 선택: " + (gameManager.isPlayerTeamSelectionEnabled() ? "§a허용" : "§c차단"), "플레이어가 /팀선택 명령어로", "자유롭게 팀을 선택하거나 변경합니다.", "§e클릭하여 상태를 변경합니다."));
+        gui.setItem(12, createButton(Material.FURNACE, "§7자동 제련: " + (gameManager.isAutoSmeltEnabled() ? "§a켜짐" : "§c꺼짐"), "철, 금, 구리 등 특정 광물을 캘 때", "자동으로 제련된 상태로 드롭됩니다.", "§e클릭하여 상태를 변경합니다."));
+        gui.setItem(14, createButton(Material.PLAYER_HEAD, "§6수동 팀 배정", "GUI를 통해 특정 플레이어를", "원하는 팀으로 강제 이동시킵니다."));
+        gui.setItem(16, createButton(Material.ENDER_PEARL, "§dTPA 쿨타임 초기화", "모든 플레이어의 TPA 관련", "명령어 쿨타임을 즉시 초기화합니다."));
 
         // --- Row 2: In-Game Time Adjustment ---
         gui.setItem(13, createButton(Material.DIAMOND_BLOCK, "§b남은 시간 실시간 조절", "§a좌클릭: +60초", "§c우클릭: -60초", "§e(파밍 중에만 작동)"));

@@ -190,39 +190,33 @@ public class WildDuel extends JavaPlugin {
         }
 
         // Delete the world folder asynchronously
-        new org.bukkit.scheduler.BukkitRunnable() {
-            @Override
-            public void run() {
-                getLogger().info("Attempting to delete world folder asynchronously: " + worldFolder.getName());
-                boolean deleted = deleteWorld(worldFolder);
-                if (deleted) {
-                    getLogger().info("World folder " + worldFolder.getName() + " deleted successfully.");
-                } else {
-                    getLogger().warning("Failed to delete world folder: " + worldFolder.getName());
-                }
-
-                // Create the new world back on the main thread
-                new org.bukkit.scheduler.BukkitRunnable() {
-                    @Override
-                    public void run() {
-                        getLogger().info("Creating new 'wildduel_game'...");
-                        WorldCreator wc = new WorldCreator("wildduel_game");
-                        wc.seed(new Random().nextLong());
-                        World newWorld = wc.createWorld();
-                        if (newWorld != null) {
-                            getLogger().info("New 'wildduel_game' created successfully.");
-                        } else {
-                            getLogger().severe("Failed to create new 'wildduel_game'.");
-                        }
-                        
-                        // Execute the callback if it exists
-                        if (callback != null) {
-                            callback.run();
-                        }
-                    }
-                }.runTask(WildDuel.getInstance());
+        Bukkit.getAsyncScheduler().runNow(this, (scheduledTask) -> {
+            getLogger().info("Attempting to delete world folder asynchronously: " + worldFolder.getName());
+            boolean deleted = deleteWorld(worldFolder);
+            if (deleted) {
+                getLogger().info("World folder " + worldFolder.getName() + " deleted successfully.");
+            } else {
+                getLogger().warning("Failed to delete world folder: " + worldFolder.getName());
             }
-        }.runTaskAsynchronously(WildDuel.getInstance());
+
+            // Create the new world back on the main thread
+            Bukkit.getScheduler().runTask(this, () -> {
+                getLogger().info("Creating new 'wildduel_game'...");
+                WorldCreator wc = new WorldCreator("wildduel_game");
+                wc.seed(new Random().nextLong());
+                World newWorld = wc.createWorld();
+                if (newWorld != null) {
+                    getLogger().info("New 'wildduel_game' created successfully.");
+                } else {
+                    getLogger().severe("Failed to create new 'wildduel_game'.");
+                }
+                
+                // Execute the callback if it exists
+                if (callback != null) {
+                    callback.run();
+                }
+            });
+        });
     }
 
     private boolean deleteWorld(File path) {

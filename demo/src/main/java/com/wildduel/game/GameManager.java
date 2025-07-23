@@ -10,22 +10,15 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitRunnable;
-import org.bukkit.boss.BarColor;
-import org.bukkit.boss.BarStyle;
-import org.bukkit.boss.BossBar;
-import org.bukkit.entity.Player;
-import org.bukkit.inventory.ItemStack;
-import org.bukkit.potion.PotionEffect;
-import org.bukkit.potion.PotionEffectType;
-import org.bukkit.scheduler.BukkitRunnable;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Random;
 import org.bukkit.ChatColor;
+import java.util.concurrent.CompletableFuture;
 import net.md_5.bungee.api.ChatMessageType;
 import net.md_5.bungee.api.chat.TextComponent;
+import io.papermc.lib.PaperLib;
 
 public class GameManager {
 
@@ -150,8 +143,10 @@ public class GameManager {
 
             // Use a list of players to teleport to avoid ConcurrentModificationException
             List<Player> playersToTeleport = new ArrayList<>(lobbyWorld.getPlayers());
+            List<CompletableFuture<Boolean>> teleportFutures = new ArrayList<>();
+
             for (Player player : playersToTeleport) {
-                teleportToCenter(player, gameWorld);
+                teleportFutures.add(teleportToCenter(player, gameWorld));
                 player.setGameMode(GameMode.SURVIVAL);
                 player.setExp(0F);
                 player.setLevel(0);
@@ -162,15 +157,17 @@ public class GameManager {
                 WildDuel.getInstance().getDefaultStartInventory().apply(player);
             }
 
-            startTimer();
+            // Wait for all teleports to complete, then start the timer.
+            CompletableFuture.allOf(teleportFutures.toArray(new CompletableFuture[0])).thenRun(() -> {
+                // This code runs on the main server thread after all teleports are done.
+                startTimer();
+            });
         });
     }
 
-    private void teleportToCenter(Player player, World world) {
-        WorldBorder border = world.getWorldBorder();
-        Location center = border.getCenter();
-        int y = world.getHighestBlockYAt(center.getBlockX(), center.getBlockZ()) + 1;
-        player.teleport(new Location(world, center.getX(), y, center.getZ()));
+    private CompletableFuture<Boolean> teleportToCenter(Player player, World world) {
+        Location spawnLocation = world.getSpawnLocation();
+        return io.papermc.lib.PaperLib.teleportAsync(player, spawnLocation);
     }
 
     private void startTimer() {

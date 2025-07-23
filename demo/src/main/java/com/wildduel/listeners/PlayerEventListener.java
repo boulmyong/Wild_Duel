@@ -22,6 +22,7 @@ import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.event.player.PlayerRespawnEvent;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.configuration.ConfigurationSection;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -33,19 +34,27 @@ public class PlayerEventListener implements Listener {
     private final GameManager gameManager;
     private final TeamManager teamManager;
     private final Map<Material, Material> smeltMap = new HashMap<>();
-    private final Map<UUID, Location> deathLocations = new HashMap<>();
 
     public PlayerEventListener(GameManager gameManager, TeamManager teamManager) {
         this.gameManager = gameManager;
         this.teamManager = teamManager;
-        // Initialize smelt map
-        smeltMap.put(Material.IRON_ORE, Material.IRON_INGOT);
-        smeltMap.put(Material.GOLD_ORE, Material.GOLD_INGOT);
-        smeltMap.put(Material.COPPER_ORE, Material.COPPER_INGOT);
-        smeltMap.put(Material.ANCIENT_DEBRIS, Material.NETHERITE_SCRAP);
-        smeltMap.put(Material.DEEPSLATE_IRON_ORE, Material.IRON_INGOT);
-        smeltMap.put(Material.DEEPSLATE_GOLD_ORE, Material.GOLD_INGOT);
-        smeltMap.put(Material.DEEPSLATE_COPPER_ORE, Material.COPPER_INGOT);
+        loadSmeltMap();
+    }
+
+    public void loadSmeltMap() {
+        smeltMap.clear();
+        ConfigurationSection section = WildDuel.getInstance().getConfig().getConfigurationSection("auto-smelt-mapping");
+        if (section != null) {
+            for (String key : section.getKeys(false)) {
+                try {
+                    Material from = Material.valueOf(key.toUpperCase());
+                    Material to = Material.valueOf(section.getString(key, "").toUpperCase());
+                    smeltMap.put(from, to);
+                } catch (IllegalArgumentException e) {
+                    WildDuel.getInstance().getLogger().warning("[AutoSmelt] Invalid material name in config.yml: " + key + " or " + section.getString(key));
+                }
+            }
+        }
     }
 
     @EventHandler
@@ -69,17 +78,14 @@ public class PlayerEventListener implements Listener {
     public void onPlayerDeath(PlayerDeathEvent event) {
         Player player = event.getEntity();
         GameState gameState = gameManager.getGameState();
-        Bukkit.getLogger().info("[DEBUG] PlayerDeathEvent for " + player.getName() + " in state " + gameState);
 
         if (gameState == GameState.BATTLE) {
-            Location deathLoc = player.getLocation();
-            deathLocations.put(player.getUniqueId(), deathLoc);
-            Bukkit.getLogger().info("[DEBUG] Stored death location for " + player.getName() + ": " + deathLoc.toString());
-            // Check for win condition after a delay
-            org.bukkit.Bukkit.getScheduler().runTaskLater(WildDuel.getInstance(), gameManager::checkWinCondition, 20L);
+            // Set spectator mode immediately upon death in battle
+            player.setGameMode(GameMode.SPECTATOR);
+            // Check for win condition after a delay to allow for death processing
+            Bukkit.getScheduler().runTaskLater(WildDuel.getInstance(), gameManager::checkWinCondition, 20L);
         } else if (gameState == GameState.FARMING) {
-            // In farming, they just respawn normally. The win condition check might be relevant.
-            org.bukkit.Bukkit.getScheduler().runTaskLater(WildDuel.getInstance(), gameManager::checkWinCondition, 20L);
+            // In farming, they just respawn normally. Let the onPlayerRespawn handle the location.
         }
     }
 
@@ -87,37 +93,24 @@ public class PlayerEventListener implements Listener {
     public void onPlayerRespawn(PlayerRespawnEvent event) {
         Player player = event.getPlayer();
         GameState gameState = gameManager.getGameState();
-        Bukkit.getLogger().info("[DEBUG] PlayerRespawnEvent for " + player.getName() + " in state " + gameState);
 
         if (gameState == GameState.BATTLE || gameState == GameState.ENDED) {
-            Location deathLoc = deathLocations.remove(player.getUniqueId());
-            if (deathLoc != null) {
-                Bukkit.getLogger().info("[DEBUG] Found death location for " + player.getName() + ". Setting respawn to: " + deathLoc.toString());
-                event.setRespawnLocation(deathLoc);
-            } else {
-                // If no death location is found (e.g. player died before this fix, or joined mid-game)
-                // teleport them to the lobby world instead of the main world spawn.
-                Location lobbySpawn = gameManager.getLobbyWorld().getSpawnLocation();
-                Bukkit.getLogger().warning("[DEBUG] Could not find death location for " + player.getName() + ". Using lobby fallback: " + lobbySpawn.toString());
-                event.setRespawnLocation(lobbySpawn);
-            }
-            // Set to spectator AFTER respawning
-            org.bukkit.Bukkit.getScheduler().runTaskLater(WildDuel.getInstance(), () -> {
-                if(player.isOnline()) {
-                    Bukkit.getLogger().info("[DEBUG] Setting gamemode to SPECTATOR for " + player.getName());
-                    player.setGameMode(GameMode.SPECTATOR);
+            // If the game is in battle or has ended, players should always respawn at the lobby.
+            event.setRespawnLocation(gameManager.getLobbyWorld().getSpawnLocation());
+            // A short delay to ensure they are in the lobby, then prepare them.
+            Bukkit.getScheduler().runTaskLater(WildDuel.getInstance(), () -> {
+                if (player.isOnline()) {
+                    gameManager.preparePlayerForLobby(player);
+                    player.setGameMode(GameMode.SPECTATOR); // Re-affirm spectator mode
                 }
             }, 1L);
-
         } else if (gameState == GameState.FARMING) {
-            Location respawnLoc = gameManager.getGameWorld().getSpawnLocation();
-            Bukkit.getLogger().info("[DEBUG] Player " + player.getName() + " respawning in FARMING state to: " + respawnLoc.toString());
-            event.setRespawnLocation(respawnLoc);
-        } else if (gameState == GameState.LOBBY || gameState == GameState.COUNTDOWN) {
-            Location lobbySpawn = gameManager.getLobbyWorld().getSpawnLocation();
-            event.setRespawnLocation(lobbySpawn);
-            // Teleport to lobby and prepare them again after respawn
-            org.bukkit.Bukkit.getScheduler().runTaskLater(WildDuel.getInstance(), () -> {
+            // Respawn at the game world's spawn during the farming phase.
+            event.setRespawnLocation(gameManager.getGameWorld().getSpawnLocation());
+        } else {
+            // For any other state (Lobby, Countdown), respawn and prepare in the lobby.
+            event.setRespawnLocation(gameManager.getLobbyWorld().getSpawnLocation());
+            Bukkit.getScheduler().runTaskLater(WildDuel.getInstance(), () -> {
                 if (player.isOnline()) {
                     gameManager.preparePlayerForLobby(player);
                 }

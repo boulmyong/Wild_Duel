@@ -4,6 +4,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
 import org.bukkit.scoreboard.Scoreboard;
+import org.bukkit.scoreboard.ScoreboardManager;
 import org.bukkit.scoreboard.Team;
 
 import java.util.*;
@@ -12,8 +13,14 @@ public class TeamManager {
 
     private final Map<String, TeamData> teams = new HashMap<>();
     private final Map<UUID, String> playerTeams = new HashMap<>();
+    private final Scoreboard scoreboard;
 
     public TeamManager() {
+        ScoreboardManager manager = Bukkit.getScoreboardManager();
+        if (manager == null) {
+            throw new IllegalStateException("Scoreboard Manager could not be accessed.");
+        }
+        this.scoreboard = manager.getMainScoreboard();
         initializeTeams();
     }
 
@@ -25,7 +32,6 @@ public class TeamManager {
 
     public void createTeam(String name, ChatColor color) {
         teams.put(name, new TeamData(name, color));
-        Scoreboard scoreboard = Objects.requireNonNull(Bukkit.getScoreboardManager()).getMainScoreboard();
         Team team = scoreboard.getTeam(name);
         if (team == null) {
             team = scoreboard.registerNewTeam(name);
@@ -82,7 +88,6 @@ public class TeamManager {
 
     public void resetTeams() {
         leaveAllTeams();
-        Scoreboard scoreboard = Objects.requireNonNull(Bukkit.getScoreboardManager()).getMainScoreboard();
         for (String teamName : teams.keySet()) {
             Team team = scoreboard.getTeam(teamName);
             if (team != null) {
@@ -109,23 +114,23 @@ public class TeamManager {
     }
 
     private void updatePlayerScoreboard(Player player, TeamData teamData) {
-        Scoreboard scoreboard = Objects.requireNonNull(Bukkit.getScoreboardManager()).getMainScoreboard();
         Team team = scoreboard.getTeam(teamData.getName());
         if (team == null) {
+            // This should ideally not happen if teams are initialized correctly
             createTeam(teamData.getName(), teamData.getColor());
             team = scoreboard.getTeam(teamData.getName());
         }
         player.setScoreboard(scoreboard);
-        Objects.requireNonNull(team).addEntry(player.getName());
+        if (team != null) {
+            team.addEntry(player.getName());
+        }
     }
 
     private void removePlayerFromScoreboardTeam(Player player) {
-        Scoreboard scoreboard = Objects.requireNonNull(Bukkit.getScoreboardManager()).getMainScoreboard();
         Team team = scoreboard.getEntryTeam(player.getName());
         if (team != null) {
             team.removeEntry(player.getName());
         }
-        player.setScoreboard(scoreboard);
     }
 
     public void applyTeamVisualsOnJoin(Player player) {

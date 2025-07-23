@@ -80,8 +80,13 @@ public class WildDuelCommand implements CommandExecutor {
     }
 
     private void handleResetCommand(CommandSender sender, String[] args) {
-        if (!sender.isOp() && !sender.hasPermission("wildduel.admin")) {
+        if (!sender.hasPermission("wildduel.admin")) {
             sender.sendMessage("§c이 명령어를 사용할 권한이 없습니다.");
+            return;
+        }
+
+        if (gameManager.getGameState() != com.wildduel.game.GameState.LOBBY) {
+            sender.sendMessage("§c게임이 진행 중일 때는 초기화할 수 없습니다. 먼저 게임을 종료해주세요.");
             return;
         }
 
@@ -128,19 +133,7 @@ public class WildDuelCommand implements CommandExecutor {
         });
     }
 
-    private void deleteWorldFolder(java.io.File path) throws Exception {
-        if (path.exists()) {
-            java.io.File[] files = path.listFiles();
-            for (int i = 0; i < files.length; i++) {
-                if (files[i].isDirectory()) {
-                    deleteWorldFolder(files[i]);
-                } else {
-                    files[i].delete();
-                }
-            }
-        }
-        path.delete();
-    }
+    
 
     private void handlePlayerCommands(CommandSender sender, String[] args) {
         if (!(sender instanceof Player)) {
@@ -148,17 +141,13 @@ public class WildDuelCommand implements CommandExecutor {
             return;
         }
         Player player = (Player) sender;
-        if (!player.isOp()) {
+        if (!player.hasPermission("wildduel.admin")) {
             player.sendMessage("You do not have permission to use this command.");
             return;
         }
 
         switch (args[0].toLowerCase()) {
             case "start":
-                if (!sender.isOp()) {
-                    sender.sendMessage("You do not have permission.");
-                    return;
-                }
                 gameManager.startGame();
                 sender.sendMessage("Game sequence initiated!");
                 break;
@@ -166,25 +155,13 @@ public class WildDuelCommand implements CommandExecutor {
                 new TeamAdminGUI(teamAdminManager, teamManager).open((Player) sender);
                 break;
             case "randomteam":
-                if (!sender.isOp()) {
-                    sender.sendMessage("You do not have permission.");
-                    return;
-                }
                 teamManager.assignRandomTeams();
                 sender.sendMessage("All players have been assigned to random teams.");
                 break;
             case "admin":
-                if (!sender.isOp()) {
-                    sender.sendMessage("You do not have permission.");
-                    return;
-                }
                 new AdminGUI(gameManager, teamManager, tpaManager, teamAdminManager).open((Player) sender);
                 break;
             case "st":
-                if (!sender.isOp()) {
-                    sender.sendMessage("You do not have permission.");
-                    return;
-                }
                 if (args.length > 1) {
                     try {
                         int seconds = Integer.parseInt(args[1]);
@@ -198,10 +175,6 @@ public class WildDuelCommand implements CommandExecutor {
                 }
                 break;
             case "autosmelt":
-                if (!sender.isOp()) {
-                    sender.sendMessage("You do not have permission.");
-                    return;
-                }
                 if (args.length > 1) {
                     if (args[1].equalsIgnoreCase("on")) {
                         gameManager.setAutoSmelt(true);
@@ -217,10 +190,6 @@ public class WildDuelCommand implements CommandExecutor {
                 }
                 break;
             case "setinventory":
-                if (!player.isOp() && !player.hasPermission("wildduel.admin")) {
-                    player.sendMessage("§c이 명령어를 사용할 권한이 없습니다.");
-                    return;
-                }
                 new StartItemGUI(WildDuel.getInstance().getDefaultStartInventory()).open(player);
                 player.sendMessage("§a시작 아이템 설정 GUI를 엽니다.");
                 break;
@@ -228,7 +197,7 @@ public class WildDuelCommand implements CommandExecutor {
     }
 
     private void handleAdminTpaCommands(CommandSender sender, String[] args) {
-        if (!sender.isOp()) {
+        if (!sender.hasPermission("wildduel.admin")) {
             sender.sendMessage("You do not have permission to use this command.");
             return;
         }
