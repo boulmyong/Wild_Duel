@@ -18,7 +18,7 @@ public class TpaStatusCommand implements CommandExecutor {
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        if (!sender.isOp()) {
+        if (!sender.hasPermission("wildduel.admin")) {
             sender.sendMessage("§cYou do not have permission to use this command.");
             return true;
         }

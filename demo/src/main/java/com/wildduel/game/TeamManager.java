@@ -8,11 +8,12 @@ import org.bukkit.scoreboard.ScoreboardManager;
 import org.bukkit.scoreboard.Team;
 
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class TeamManager {
 
-    private final Map<String, TeamData> teams = new HashMap<>();
-    private final Map<UUID, String> playerTeams = new HashMap<>();
+    private final Map<String, TeamData> teams = new ConcurrentHashMap<>();
+    private final Map<UUID, String> playerTeams = new ConcurrentHashMap<>();
     private final Scoreboard scoreboard;
 
     public TeamManager() {
@@ -151,7 +152,7 @@ public class TeamManager {
     public static class TeamData {
         private final String name;
         private final ChatColor color;
-        private final Set<Player> players = new HashSet<>();
+        private final Set<Player> players = Collections.synchronizedSet(new HashSet<>());
 
         public TeamData(String name, ChatColor color) {
             this.name = name;

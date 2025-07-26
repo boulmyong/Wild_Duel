@@ -12,8 +12,68 @@ tpa-canceled: "§aTPA 요청을 취소했습니다."
 tpa-timeout: "§cTPA 요청이 시간 초과로 취소되었습니다."
 error-player-not-found: "§c플레이어를 찾을 수 없습니다."
 error-cannot-tpa-self: "§c자기 자신에게 TPA 요청을 보낼 수 없습니다."
-error-not-in-team: "§c같은 팀원에게만 TPA 요청을 보낼 수 있습니다."
+error-not-in-team: "§c같은 팀원에게만 TPA 요청을 보낼 수 없습니다."
 error-already-have-request: "§c이미 보낸 TPA 요청이 있습니다. 취소하려면 /tpacancel을 입력하세요."
 error-no-request-to-respond: "§c해당 TPA 요청을 찾을 수 없습니다."
 tpa-usage: "§c사용법: /tpa <플레이어>"
 error-must-be-player: "§c이 명령어는 플레이어만 사용할 수 있습니다."
+
+# Command Feedback Messages
+error.no-permission: "&c이 명령어를 사용할 권한이 없습니다."
+error.player-only: "&c이 명령어는 플레이어만 사용할 수 있습니다."
+error.invalid-number: "&c올바른 숫자를 입력해주세요."
+error.no-lobby-world: "&c치명적 오류: 로비 월드를 찾을 수 없습니다! 초기화를 중단합니다."
+error.must-be-lobby: "&c이 기능은 로비 상태에서만 변경할 수 있습니다."
+error.must-be-farming: "&c이 기능은 파밍 상태에서만 변경할 수 있습니다."
+
+command.start.success: "&a게임 카운트다운을 시작합니다!"
+command.start.fail: "&c지금은 게임을 시작할 수 없습니다: &e%reason%"
+
+command.randomteam.success: "&a모든 온라인 플레이어를 랜덤 팀에 배정했습니다."
+command.randomteam.no-players: "&c팀을 배정할 플레이어가 온라인에 없습니다."
+
+command.addtime.success: "&a남은 파밍 시간을 %seconds%초 만큼 조절했습니다."
+command.addtime.usage: "&c사용법: /wd st <초>"
+
+command.autosmelt.enabled: "&a자동 제련 기능이 활성화되었습니다."
+command.autosmelt.disabled: "&c자동 제련 기능이 비활성화되었습니다."
+command.autosmelt.status: "&e현재 자동 제련 기능은 &f[%status%&f]&e 상태입니다."
+command.autosmelt.usage: "&c사용법: /wd autosmelt <on|off>"
+
+command.setinventory.gui-opened: "&a시작 아이템 설정 GUI를 엽니다."
+
+command.reset.confirm-warning: "&e⚠️ 정말로 게임과 월드를 완전히 초기화하시겠습니까?\n&c이 작업은 되돌릴 수 없으며, 현재 게임 월드를 삭제합니다.\n&e계속하려면 &l/wd reset confirm&e 을 입력하세요."
+command.reset.broadcast-start: "&c⚠️ 관리자에 의해 전체 게임 초기화가 시작되었습니다. 잠시 렉이 발생할 수 있습니다."
+command.reset.admin-start: "&a[WD] 초기화 작업을 시작합니다..."
+command.reset.broadcast-complete: "&6✅ 게임과 월드가 성공적으로 초기화되었습니다!"
+command.reset.admin-complete: "&b[WD] 초기화 완료."
+
+command.tparefresh.usage: "&c사용법: /wd tparefresh <player|all>"
+command.tparefresh.success-all: "&a[TPA] 전체 플레이어의 쿨타임을 초기화했습니다."
+command.tparefresh.success-player: "&a[TPA] %player%님의 쿨타임을 초기화했습니다."
+command.tparefresh.no-cooldown: "&c[TPA] %player%님은 현재 쿨타임이 없습니다."
+
+command.tpastatus.usage: "&c사용법: /wd tpastatus <player>"
+command.tpastatus.status: "&e[TPA] %player%님의 남은 쿨타임: %minutes%분 %seconds%초"
+command.tpastatus.no-cooldown: "&a[TPA] %player%님은 현재 쿨타임이 없습니다."
+
+# Help Messages
+help.header: "&a--- 와일드 듀얼 명령어 목록 ---"
+help.footer: "&7- 상세 설정은 관리자에게 문의하거나 /wd admin 패널을 이용해주세요."
+
+help.player.title: "&e[일반 명령어]"
+help.player.wd-help: "&e/wd help &7- &f이 도움말을 표시합니다."
+help.player.team-select: "&e/팀선택 &7- &f팀 선택 GUI를 엽니다."
+help.player.tpa: "&e/tpa <player> &7- &f같은 팀원에게 텔레포트를 요청합니다."
+help.player.tpacancel: "&e/tpacancel &7- &f보낸 TPA 요청을 취소합니다."
+
+help.admin.title: "&c[관리자 명령어]"
+help.admin.admin-gui: "&e/wd admin &7- &f(추천) 모든 설정을 관리하는 GUI를 엽니다."
+help.admin.set-inventory: "&e/wd setinventory &7- &f(추천) GUI를 통해 시작 아이템을 설정합니다."
+help.admin.start: "&e/wd start &7- &f게임을 즉시 시작합니다."
+help.admin.random-team: "&e/wd randomteam &7- &f모든 플레이어를 랜덤 팀에 배정합니다."
+help.admin.add-time: "&e/wd st <seconds> &7- &f파밍 시간을 조절합니다 (양수/음수 가능)."
+help.admin.autosmelt: "&e/wd autosmelt <on|off> &7- &f자동 제련 기능을 켜거나 끕니다."
+help.admin.reset: "&e/wd reset [confirm] &7- &f게임과 월드를 초기화합니다. (confirm 필요)"
+help.admin.tpa-refresh: "&e/wd tparefresh <player|all> &7- &fTPA 쿨타임을 초기화합니다."
+help.admin.tpa-status: "&e/wd tpastatus <player> &7- &fTPA 쿨타임 상태를 확인합니다."

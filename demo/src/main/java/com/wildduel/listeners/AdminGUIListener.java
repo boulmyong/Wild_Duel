@@ -1,5 +1,6 @@
 package com.wildduel.listeners;
 
+import com.wildduel.WildDuel;
 import com.wildduel.gui.AdminGUI;
 import com.wildduel.gui.TeamAdminGUI;
 import com.wildduel.game.GameManager;
@@ -18,12 +19,14 @@ import org.bukkit.inventory.ItemStack;
 
 public class AdminGUIListener implements Listener {
 
+    private final WildDuel plugin;
     private final GameManager gameManager;
     private final TeamManager teamManager;
     private final TpaManager tpaManager;
     private final TeamAdminManager teamAdminManager;
 
-    public AdminGUIListener(GameManager gameManager, TeamManager teamManager, TpaManager tpaManager, TeamAdminManager teamAdminManager) {
+    public AdminGUIListener(WildDuel plugin, GameManager gameManager, TeamManager teamManager, TpaManager tpaManager, TeamAdminManager teamAdminManager) {
+        this.plugin = plugin;
         this.gameManager = gameManager;
         this.teamManager = teamManager;
         this.tpaManager = tpaManager;
@@ -74,7 +77,7 @@ public class AdminGUIListener implements Listener {
                 break;
             case ENDER_PEARL: // Reset TPA Cooldowns
                 tpaManager.refreshAllCooldowns();
-                admin.sendMessage("§a모든 TPA 쿨타임이 초기화되었습니다.");
+                admin.sendMessage(plugin.getMessage("command.tparefresh.success-all"));
                 admin.closeInventory();
                 refreshGui = false;
                 break;
@@ -113,7 +116,7 @@ public class AdminGUIListener implements Listener {
 
     private void toggleAutoSmelt(Player admin) {
         if (gameManager.getGameState() != GameState.LOBBY) {
-            admin.sendMessage("§c자동 제련은 로비에서만 변경할 수 있습니다.");
+            admin.sendMessage(plugin.getMessage("error.must-be-lobby"));
             return;
         }
         gameManager.setAutoSmelt(!gameManager.isAutoSmeltEnabled());
@@ -121,7 +124,7 @@ public class AdminGUIListener implements Listener {
 
     private void togglePlayerTeamSelection(Player admin) {
         if (gameManager.getGameState() != GameState.LOBBY) {
-            admin.sendMessage("§c팀 자율 선택은 로비에서만 변경할 수 있습니다.");
+            admin.sendMessage(plugin.getMessage("error.must-be-lobby"));
             return;
         }
         gameManager.setPlayerTeamSelectionEnabled(!gameManager.isPlayerTeamSelectionEnabled());
@@ -129,7 +132,7 @@ public class AdminGUIListener implements Listener {
 
     private void updatePrepTime(Player admin, int change) {
         if (gameManager.getGameState() != GameState.LOBBY) {
-            admin.sendMessage("§c총 파밍 시간은 로비에서만 설정할 수 있습니다.");
+            admin.sendMessage(plugin.getMessage("error.must-be-lobby"));
             return;
         }
         int newTime = gameManager.getInitialPrepTimeSeconds() + change;
@@ -139,10 +142,10 @@ public class AdminGUIListener implements Listener {
 
     private void adjustRemainingTime(Player admin, int change) {
         if (gameManager.getGameState() != GameState.FARMING) {
-            admin.sendMessage("§c남은 시간 조절은 파밍 중에만 가능합니다.");
+            admin.sendMessage(plugin.getMessage("error.must-be-farming"));
             return;
         }
         gameManager.addTime(change);
-        admin.sendMessage("§b남은 시간이 " + change + "초 조절되었습니다.");
+        admin.sendMessage(plugin.getMessage("command.addtime.success", "%seconds%", String.valueOf(change)));
     }
 }

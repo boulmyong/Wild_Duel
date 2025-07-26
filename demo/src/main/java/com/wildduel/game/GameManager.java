@@ -6,24 +6,23 @@ import org.bukkit.boss.BarColor;
 import org.bukkit.boss.BarStyle;
 import org.bukkit.boss.BossBar;
 import org.bukkit.entity.Player;
-import org.bukkit.inventory.ItemStack;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitRunnable;
+
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 import java.util.Random;
-import org.bukkit.ChatColor;
 import java.util.concurrent.CompletableFuture;
+import java.util.logging.Level;
 import net.md_5.bungee.api.ChatMessageType;
 import net.md_5.bungee.api.chat.TextComponent;
-import io.papermc.lib.PaperLib;
 
 public class GameManager {
 
     private final TeamManager teamManager;
-    private GameState gameState = GameState.LOBBY;
+    private volatile GameState gameState = GameState.LOBBY;
     private World lobbyWorld;
     private World gameWorld;
 
@@ -41,21 +40,31 @@ public class GameManager {
         this.teamManager = teamManager;
     }
 
+    public synchronized void setGameState(GameState newState) {
+        this.gameState = newState;
+    }
+
     public void initializeWorlds() {
         this.lobbyWorld = Bukkit.getWorld("wildduel_world");
-        this.gameWorld = Bukkit.getWorld("wildduel_game"); // Default world
-        if (lobbyWorld != null) {
-            lobbyWorld.setGameRule(GameRule.DO_DAYLIGHT_CYCLE, false);
-            lobbyWorld.setGameRule(GameRule.DO_WEATHER_CYCLE, false);
-            lobbyWorld.setTime(6000L);
-            lobbyWorld.setStorm(false);
-            lobbyWorld.setPVP(true);
+        if (this.lobbyWorld == null) {
+            WildDuel.getInstance().getLogger().severe("로비 월드(wildduel_world)를 찾을 수 없습니다! 플러그인이 정상적으로 동작하지 않을 수 있습니다.");
+            return; // 초기화 중단
         }
+
+        this.gameWorld = Bukkit.getWorld("wildduel_game"); // Default world
+        
+        lobbyWorld.setGameRule(GameRule.DO_DAYLIGHT_CYCLE, false);
+        lobbyWorld.setGameRule(GameRule.DO_WEATHER_CYCLE, false);
+        lobbyWorld.setTime(6000L);
+        lobbyWorld.setStorm(false);
+        lobbyWorld.setPVP(true);
+        
         transitionToLobby();
     }
 
     public void transitionToLobby() {
-        gameState = GameState.LOBBY;
+        setGameState(GameState.LOBBY);
+        if (lobbyWorld == null) return;
         applySaturationEffectPeriodically(lobbyWorld);
         for (Player player : Bukkit.getOnlinePlayers()) {
             preparePlayerForLobby(player);
@@ -63,8 +72,9 @@ public class GameManager {
     }
 
     public void preparePlayerForLobby(Player player) {
+        if (lobbyWorld == null) return;
         Location spawnPoint = lobbyWorld.getSpawnLocation().clone().add(0.5, 0, 0.5);
-        player.teleport(spawnPoint);
+        io.papermc.lib.PaperLib.teleportAsync(player, spawnPoint);
         player.setGameMode(GameMode.ADVENTURE);
         player.getInventory().clear();
         player.setHealth(20.0);
@@ -75,10 +85,12 @@ public class GameManager {
     }
 
     private void applySaturationEffectPeriodically(World world) {
+        if (world == null) return;
         if (saturationTask != null) saturationTask.cancel();
         saturationTask = new BukkitRunnable() {
             @Override
             public void run() {
+                if (world.getPlayers().isEmpty()) return;
                 for (Player player : world.getPlayers()) {
                     player.addPotionEffect(new PotionEffect(PotionEffectType.SATURATION, 200, 0, false, false));
                 }
@@ -93,20 +105,28 @@ public class GameManager {
         }
     }
 
-    public void startGame() {
-        if (gameState != GameState.LOBBY) {
-            return;
+    public synchronized boolean startGame() {
+        if (getGameState() != GameState.LOBBY) {
+            return false; // Not in lobby state
+        }
+        if (lobbyWorld == null || lobbyWorld.getPlayers().size() < 2) {
+            return false; // Not enough players
         }
         startCountdown();
+        return true;
     }
 
     private void startCountdown() {
-        gameState = GameState.COUNTDOWN;
+        setGameState(GameState.COUNTDOWN);
         new BukkitRunnable() {
             int countdown = 10;
 
             @Override
             public void run() {
+                if (lobbyWorld == null) {
+                    this.cancel();
+                    return;
+                }
                 if (countdown <= 0) {
                     this.cancel();
                     transitionToFarming();
@@ -121,16 +141,11 @@ public class GameManager {
     }
 
     private void transitionToFarming() {
-        WildDuel.getInstance().recreateGameWorld(() -> {
-            // This code runs after the world has been recreated.
-            this.gameWorld = Bukkit.getWorld("wildduel_game");
-            if (this.gameWorld == null) {
-                Bukkit.broadcastMessage(ChatColor.RED + "Failed to create or load the game world. Aborting game start.");
-                resetGame();
-                return;
-            }
+        recreateGameWorldAsync().thenAccept(newGameWorld -> {
+            // This code runs on the main server thread after the world is ready.
+            this.gameWorld = newGameWorld;
 
-            gameState = GameState.FARMING;
+            setGameState(GameState.FARMING);
             this.prepTimeSeconds = this.initialPrepTimeSeconds;
 
             gameWorld.setGameRule(GameRule.KEEP_INVENTORY, true);
@@ -139,14 +154,13 @@ public class GameManager {
             border.setCenter(gameWorld.getSpawnLocation());
             border.setSize(1000);
 
-            applySaturationEffectPeriodically(gameWorld);
+            applySaturationEffectPeriodically(newGameWorld); // 수정된 부분
 
-            // Use a list of players to teleport to avoid ConcurrentModificationException
             List<Player> playersToTeleport = new ArrayList<>(lobbyWorld.getPlayers());
             List<CompletableFuture<Boolean>> teleportFutures = new ArrayList<>();
 
             for (Player player : playersToTeleport) {
-                teleportFutures.add(teleportToCenter(player, gameWorld));
+                teleportFutures.add(teleportToCenter(player, newGameWorld));
                 player.setGameMode(GameMode.SURVIVAL);
                 player.setExp(0F);
                 player.setLevel(0);
@@ -157,12 +171,67 @@ public class GameManager {
                 WildDuel.getInstance().getDefaultStartInventory().apply(player);
             }
 
-            // Wait for all teleports to complete, then start the timer.
-            CompletableFuture.allOf(teleportFutures.toArray(new CompletableFuture[0])).thenRun(() -> {
-                // This code runs on the main server thread after all teleports are done.
-                startTimer();
-            });
+            CompletableFuture.allOf(teleportFutures.toArray(new CompletableFuture[0])).thenRun(this::startTimer);
+
+        }).exceptionally(ex -> {
+            Bukkit.broadcastMessage(ChatColor.RED + "게임 월드 생성에 실패했습니다. 게임 시작이 중단됩니다.");
+            WildDuel.getInstance().getLogger().log(Level.SEVERE, "게임 월드 재생성 중 심각한 오류 발생", ex);
+            resetGame();
+            return null; // Handle the exception
         });
+    }
+
+    private CompletableFuture<World> recreateGameWorldAsync() {
+        return CompletableFuture.supplyAsync(() -> {
+            World world = Bukkit.getWorld("wildduel_game");
+            if (world != null) {
+                WildDuel.getInstance().getLogger().info("기존 게임 월드를 언로드합니다: " + world.getName());
+                if (!Bukkit.unloadWorld(world, false)) {
+                    throw new RuntimeException("게임 월드 언로드에 실패했습니다: " + world.getName());
+                }
+                WildDuel.getInstance().getLogger().info("게임 월드 언로드 완료.");
+                return world.getWorldFolder();
+            }
+            return new File(Bukkit.getWorldContainer(), "wildduel_game");
+        }, runnable -> Bukkit.getScheduler().runTask(WildDuel.getInstance(), runnable))
+        .thenComposeAsync(worldFolder -> CompletableFuture.runAsync(() -> {
+            if (worldFolder.exists()) {
+                WildDuel.getInstance().getLogger().info("기존 월드 폴더를 삭제합니다: " + worldFolder.getName());
+                if (!deleteWorld(worldFolder)) {
+                    throw new RuntimeException("월드 폴더 삭제에 실패했습니다: " + worldFolder.getName());
+                }
+                WildDuel.getInstance().getLogger().info("월드 폴더 삭제 완료.");
+            }
+        }, runnable -> WildDuel.getInstance().getServer().getAsyncScheduler().runNow(WildDuel.getInstance(), task -> runnable.run())))
+        .thenCompose(v -> CompletableFuture.supplyAsync(() -> {
+            WildDuel.getInstance().getLogger().info("새로운 게임 월드를 생성합니다...");
+            WorldCreator wc = new WorldCreator("wildduel_game");
+            wc.seed(new Random().nextLong());
+            World newWorld = wc.createWorld();
+            if (newWorld == null) {
+                throw new RuntimeException("새로운 게임 월드 생성에 실패했습니다.");
+            }
+            WildDuel.getInstance().getLogger().info("새로운 게임 월드 생성 완료.");
+            return newWorld;
+        }, runnable -> Bukkit.getScheduler().runTask(WildDuel.getInstance(), runnable)));
+    }
+
+    private boolean deleteWorld(File path) {
+        if (path.exists()) {
+            File[] files = path.listFiles();
+            if (files != null) {
+                for (File file : files) {
+                    if (file.isDirectory()) {
+                        deleteWorld(file);
+                    } else {
+                        if (!file.delete()) {
+                            return false;
+                        }
+                    }
+                }
+            }
+        }
+        return path.delete();
     }
 
     private CompletableFuture<Boolean> teleportToCenter(Player player, World world) {
@@ -173,6 +242,7 @@ public class GameManager {
     private void startTimer() {
         timerBar = Bukkit.createBossBar("파밍 시간", BarColor.BLUE, BarStyle.SOLID);
         timerBar.setVisible(true);
+        if (gameWorld == null) return;
         for (Player player : gameWorld.getPlayers()) {
             timerBar.addPlayer(player);
         }
@@ -197,7 +267,8 @@ public class GameManager {
     }
 
     private void startBattle() {
-        gameState = GameState.BATTLE;
+        setGameState(GameState.BATTLE);
+        if (gameWorld == null) return;
         gameWorld.setGameRule(GameRule.KEEP_INVENTORY, false);
         gameWorld.setPVP(true);
 
@@ -218,8 +289,8 @@ public class GameManager {
         }
     }
 
-    public void checkWinCondition() {
-        if (gameState != GameState.BATTLE) return;
+    public synchronized void checkWinCondition() {
+        if (getGameState() != GameState.BATTLE || gameWorld == null) return;
 
         List<TeamManager.TeamData> activeTeams = new ArrayList<>();
         for (TeamManager.TeamData teamData : teamManager.getTeams()) {
@@ -235,8 +306,9 @@ public class GameManager {
         }
     }
 
-    private void endGame(TeamManager.TeamData winner) {
-        gameState = GameState.ENDED;
+    private synchronized void endGame(TeamManager.TeamData winner) {
+        if (getGameState() == GameState.ENDED) return;
+        setGameState(GameState.ENDED);
         String winnerMessage = winner != null ? winner.getColor() + winner.getName() + " 팀 승리!" : "게임이 무승부로 종료되었습니다!";
         Bukkit.broadcastMessage("§a========================================");
         Bukkit.broadcastMessage("§e           게임 종료");
@@ -252,23 +324,21 @@ public class GameManager {
         if (timerBar != null) timerBar.removeAll();
         if (distanceDisplayTask != null) distanceDisplayTask.cancel();
 
-        // After a 10-second delay, teleport everyone back to the lobby and prepare them
         new BukkitRunnable() {
             @Override
             public void run() {
                 transitionToLobby();
-                // No need to recreate world here anymore as it's handled before farming.
             }
         }.runTaskLater(WildDuel.getInstance(), 10 * 20);
     }
 
-    public void resetGame() {
+    public synchronized void resetGame() {
         if (gameTask != null) gameTask.cancel();
         if (saturationTask != null) saturationTask.cancel();
         if (timerBar != null) timerBar.removeAll();
         if (distanceDisplayTask != null) distanceDisplayTask.cancel();
 
-        gameState = GameState.LOBBY;
+        setGameState(GameState.LOBBY);
         autoSmeltEnabled = false;
         playerTeamSelectionEnabled = false;
         initialPrepTimeSeconds = 900;
@@ -293,7 +363,7 @@ public class GameManager {
     public void setPrepTime(int seconds) { this.initialPrepTimeSeconds = seconds; }
 
     public void addTime(int seconds) {
-        if (gameState != GameState.FARMING) {
+        if (getGameState() != GameState.FARMING) {
             return; // Only works during farming phase
         }
         this.prepTimeSeconds += seconds;
@@ -313,10 +383,11 @@ public class GameManager {
         distanceDisplayTask = new BukkitRunnable() {
             @Override
             public void run() {
-                if (gameState != GameState.BATTLE) {
+                if (getGameState() != GameState.BATTLE) {
                     this.cancel();
                     return;
                 }
+                if (gameWorld == null) return;
                 WorldBorder border = gameWorld.getWorldBorder();
                 Location center = border.getCenter();
                 for (Player player : gameWorld.getPlayers()) {
@@ -327,11 +398,8 @@ public class GameManager {
         distanceDisplayTask.runTaskTimer(WildDuel.getInstance(), 0, 20); // Every second
     }
 
-    public void handlePlayerQuit(Player player) {
-        // The TeamManager handles removing the player from their team.
-        // We just need to check if the game should end.
-        if (gameState == GameState.BATTLE || gameState == GameState.FARMING) {
-            // Run win condition check on the next tick to ensure player is fully gone
+    public synchronized void handlePlayerQuit(Player player) {
+        if (getGameState() == GameState.BATTLE || getGameState() == GameState.FARMING) {
             Bukkit.getScheduler().runTask(WildDuel.getInstance(), this::checkWinCondition);
         }
     }

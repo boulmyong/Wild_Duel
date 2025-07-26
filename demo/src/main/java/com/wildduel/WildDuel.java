@@ -72,7 +72,7 @@ public class WildDuel extends JavaPlugin {
         // Ensure teams are set up on plugin enable/reload
         teamManager.initializeTeams();
 
-        getCommand("wd").setExecutor(new WildDuelCommand(gameManager, teamManager, teamAdminManager, tpaManager));
+        getCommand("wd").setExecutor(new WildDuelCommand(this, gameManager, teamManager, teamAdminManager, tpaManager));
         getCommand("wd").setTabCompleter(new WildDuelTabCompleter());
         getCommand("tpa").setExecutor(new TpaCommand(tpaManager));
         getCommand("tpacancel").setExecutor(new TpaCancelCommand(tpaManager));
@@ -82,7 +82,7 @@ public class WildDuel extends JavaPlugin {
         getServer().getPluginManager().registerEvents(new PlayerEventListener(gameManager, teamManager), this);
         getServer().getPluginManager().registerEvents(new TeamAdminGUIListener(teamAdminManager, teamManager), this);
         getServer().getPluginManager().registerEvents(new TpaListener(tpaManager), this);
-        getServer().getPluginManager().registerEvents(new AdminGUIListener(gameManager, teamManager, tpaManager, teamAdminManager), this);
+        getServer().getPluginManager().registerEvents(new AdminGUIListener(this, gameManager, teamManager, tpaManager, teamAdminManager), this);
         getServer().getPluginManager().registerEvents(new TeamGUIListener(teamManager), this);
         getServer().getPluginManager().registerEvents(new StartItemGUIListener(this), this);
         getLogger().info("WildDuel plugin enabled!");
@@ -104,6 +104,9 @@ public class WildDuel extends JavaPlugin {
 
     @Override
     public void onDisable() {
+        if (gameManager != null) {
+            gameManager.resetGame();
+        }
         getLogger().info("WildDuel plugin disabled!");
     }
 
@@ -171,69 +174,7 @@ public class WildDuel extends JavaPlugin {
         }
     }
 
-    public void recreateGameWorld(Runnable callback) {
-        World gameWorld = Bukkit.getWorld("wildduel_game");
-        File worldFolder = (gameWorld != null) ? gameWorld.getWorldFolder() : new File(Bukkit.getWorldContainer(), "wildduel_game");
-
-        // Unload the world on the main thread
-        if (gameWorld != null) {
-            getLogger().info("Unloading world: " + gameWorld.getName());
-            if (!Bukkit.unloadWorld(gameWorld, false)) {
-                getLogger().warning("Failed to unload world: " + gameWorld.getName() + ". World deletion and creation will be aborted.");
-                // Optionally, run callback even if unload fails, or handle error differently
-                if (callback != null) {
-                    Bukkit.getScheduler().runTask(this, callback);
-                }
-                return;
-            }
-            getLogger().info("World " + worldFolder.getName() + " unloaded successfully.");
-        }
-
-        // Delete the world folder asynchronously
-        Bukkit.getAsyncScheduler().runNow(this, (scheduledTask) -> {
-            getLogger().info("Attempting to delete world folder asynchronously: " + worldFolder.getName());
-            boolean deleted = deleteWorld(worldFolder);
-            if (deleted) {
-                getLogger().info("World folder " + worldFolder.getName() + " deleted successfully.");
-            } else {
-                getLogger().warning("Failed to delete world folder: " + worldFolder.getName());
-            }
-
-            // Create the new world back on the main thread
-            Bukkit.getScheduler().runTask(this, () -> {
-                getLogger().info("Creating new 'wildduel_game'...");
-                WorldCreator wc = new WorldCreator("wildduel_game");
-                wc.seed(new Random().nextLong());
-                World newWorld = wc.createWorld();
-                if (newWorld != null) {
-                    getLogger().info("New 'wildduel_game' created successfully.");
-                } else {
-                    getLogger().severe("Failed to create new 'wildduel_game'.");
-                }
-                
-                // Execute the callback if it exists
-                if (callback != null) {
-                    callback.run();
-                }
-            });
-        });
-    }
-
-    private boolean deleteWorld(File path) {
-        if (path.exists()) {
-            File[] files = path.listFiles();
-            if (files != null) {
-                for (File file : files) {
-                    if (file.isDirectory()) {
-                        deleteWorld(file);
-                    } else {
-                        file.delete();
-                    }
-                }
-            }
-        }
-        return path.delete();
-    }
+    
 
     public PlayerInventorySnapshot getDefaultStartInventory() {
         return defaultStartInventory;

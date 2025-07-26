@@ -8,6 +8,7 @@ import org.bukkit.Location;
 import org.bukkit.Sound;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitRunnable;
+import org.bukkit.scheduler.BukkitTask;
 
 import java.util.Map;
 import java.util.UUID;
@@ -63,16 +64,16 @@ public class TpaManager {
         target.spigot().sendMessage(message);
 
         // Auto-cancel after timeout
-        new BukkitRunnable() {
+        BukkitTask timeoutTask = new BukkitRunnable() {
             @Override
             public void run() {
-                if (pendingRequests.containsValue(request)) {
-                    cancelTpa(requester, target, false);
+                if (pendingRequests.remove(requester.getUniqueId(), request)) {
                     requester.sendMessage("§cTPA 요청이 시간 초과로 취소되었습니다.");
                     target.sendMessage("§c" + requester.getName() + "님의 TPA 요청이 시간 초과로 취소되었습니다.");
                 }
             }
         }.runTaskLater(WildDuel.getInstance(), tpaTimeout * 20);
+        request.setTimeoutTask(timeoutTask);
     }
 
     public void handleResponse(Player target, String requesterName, boolean accepted) {
@@ -88,6 +89,7 @@ public class TpaManager {
             return;
         }
 
+        request.cancelTimeoutTask(); // Cancel the timeout task
         pendingRequests.remove(requester.getUniqueId());
 
         if (accepted) {
@@ -101,12 +103,15 @@ public class TpaManager {
     }
 
     public void cancelTpa(Player requester, Player target, boolean manual) {
-        pendingRequests.remove(requester.getUniqueId());
-        if (manual) {
-            requester.sendMessage("§aTPA 요청을 취소했습니다.");
-        }
-        if (target != null) {
-            target.sendMessage("§c" + requester.getName() + "님의 TPA 요청이 취소되었습니다.");
+        TpaRequest request = pendingRequests.remove(requester.getUniqueId());
+        if (request != null) {
+            request.cancelTimeoutTask();
+            if (manual) {
+                requester.sendMessage("§aTPA 요청을 취소했습니다.");
+            }
+            if (target != null) {
+                target.sendMessage("§c" + requester.getName() + "님의 TPA 요청이 취소되었습니다.");
+            }
         }
     }
 
@@ -159,6 +164,7 @@ public class TpaManager {
     }
 
     public void resetTpa() {
+        pendingRequests.values().forEach(TpaRequest::cancelTimeoutTask);
         pendingRequests.clear();
         cooldowns.clear();
     }

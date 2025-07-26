@@ -12,22 +12,21 @@ import com.wildduel.WildDuel;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.World;
-import org.bukkit.WorldCreator;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
-import org.bukkit.Material;
-import org.bukkit.inventory.ItemStack;
 
 public class WildDuelCommand implements CommandExecutor {
 
+    private final WildDuel plugin;
     private final GameManager gameManager;
     private final TeamManager teamManager;
     private final TeamAdminManager teamAdminManager;
     private final TpaManager tpaManager;
 
-    public WildDuelCommand(GameManager gameManager, TeamManager teamManager, TeamAdminManager teamAdminManager, TpaManager tpaManager) {
+    public WildDuelCommand(WildDuel plugin, GameManager gameManager, TeamManager teamManager, TeamAdminManager teamAdminManager, TpaManager tpaManager) {
+        this.plugin = plugin;
         this.gameManager = gameManager;
         this.teamManager = teamManager;
         this.teamAdminManager = teamAdminManager;
@@ -41,28 +40,18 @@ public class WildDuelCommand implements CommandExecutor {
             return true;
         }
 
-        // Non-player specific commands can be handled here if any
-
-        if (!(sender instanceof Player)) {
-            // Handle commands that can be run by console if any, otherwise return
-            // For now, all commands require a player
-        }
-
         switch (args[0].toLowerCase()) {
             case "help":
                 sendHelpMessage(sender);
                 break;
-            case "set":
-            case "sp":
             case "start":
-            case "preptime":
-            case "st":
             case "team":
             case "randomteam":
             case "admin":
             case "autosmelt":
             case "setinventory":
-                handlePlayerCommands(sender, args);
+            case "st": // for addTime
+                handleAdminCommands(sender, args);
                 break;
             case "reset":
                 handleResetCommand(sender, args);
@@ -79,14 +68,87 @@ public class WildDuelCommand implements CommandExecutor {
         return true;
     }
 
-    private void handleResetCommand(CommandSender sender, String[] args) {
+    private void handleAdminCommands(CommandSender sender, String[] args) {
         if (!sender.hasPermission("wildduel.admin")) {
-            sender.sendMessage("§c이 명령어를 사용할 권한이 없습니다.");
+            sender.sendMessage(plugin.getMessage("error.no-permission"));
             return;
         }
 
-        if (gameManager.getGameState() != com.wildduel.game.GameState.LOBBY) {
-            sender.sendMessage("§c게임이 진행 중일 때는 초기화할 수 없습니다. 먼저 게임을 종료해주세요.");
+        Player player = (sender instanceof Player) ? (Player) sender : null;
+
+        switch (args[0].toLowerCase()) {
+            case "start":
+                if (gameManager.startGame()) {
+                    sender.sendMessage(plugin.getMessage("command.start.success"));
+                } else {
+                    sender.sendMessage(plugin.getMessage("command.start.fail", "%reason%", "게임 상태가 로비가 아니거나, 플레이어가 2명 미만입니다."));
+                }
+                break;
+            case "team":
+                if (player == null) {
+                    sender.sendMessage(plugin.getMessage("error.player-only"));
+                    return;
+                }
+                new TeamAdminGUI(teamAdminManager, teamManager).open(player);
+                break;
+            case "randomteam":
+                if (Bukkit.getOnlinePlayers().isEmpty()) {
+                    sender.sendMessage(plugin.getMessage("command.randomteam.no-players"));
+                    return;
+                }
+                teamManager.assignRandomTeams();
+                sender.sendMessage(plugin.getMessage("command.randomteam.success"));
+                break;
+            case "admin":
+                if (player == null) {
+                    sender.sendMessage(plugin.getMessage("error.player-only"));
+                    return;
+                }
+                new AdminGUI(gameManager, teamManager, tpaManager, teamAdminManager).open(player);
+                break;
+            case "st":
+                if (args.length > 1) {
+                    try {
+                        int seconds = Integer.parseInt(args[1]);
+                        gameManager.addTime(seconds);
+                        sender.sendMessage(plugin.getMessage("command.addtime.success", "%seconds%", String.valueOf(seconds)));
+                    } catch (NumberFormatException e) {
+                        sender.sendMessage(plugin.getMessage("error.invalid-number"));
+                    }
+                } else {
+                    sender.sendMessage(plugin.getMessage("command.addtime.usage"));
+                }
+                break;
+            case "autosmelt":
+                if (args.length > 1) {
+                    if (args[1].equalsIgnoreCase("on")) {
+                        gameManager.setAutoSmelt(true);
+                        sender.sendMessage(plugin.getMessage("command.autosmelt.enabled"));
+                    } else if (args[1].equalsIgnoreCase("off")) {
+                        gameManager.setAutoSmelt(false);
+                        sender.sendMessage(plugin.getMessage("command.autosmelt.disabled"));
+                    } else {
+                        sender.sendMessage(plugin.getMessage("command.autosmelt.usage"));
+                    }
+                } else {
+                    boolean currentState = gameManager.isAutoSmeltEnabled();
+                    sender.sendMessage(plugin.getMessage("command.autosmelt.status", "%status%", (currentState ? "활성화" : "비활성화")));
+                }
+                break;
+            case "setinventory":
+                if (player == null) {
+                    sender.sendMessage(plugin.getMessage("error.player-only"));
+                    return;
+                }
+                new StartItemGUI(plugin.getDefaultStartInventory()).open(player);
+                player.sendMessage(plugin.getMessage("command.setinventory.gui-opened"));
+                break;
+        }
+    }
+
+    private void handleResetCommand(CommandSender sender, String[] args) {
+        if (!sender.hasPermission("wildduel.admin")) {
+            sender.sendMessage(plugin.getMessage("error.no-permission"));
             return;
         }
 
@@ -95,170 +157,98 @@ public class WildDuelCommand implements CommandExecutor {
             return;
         }
 
-        sender.sendMessage("§6=============================================");
-        sender.sendMessage("§e⚠️ 정말로 게임과 월드를 완전히 초기화하시겠습니까?");
-        sender.sendMessage("§c이 작업은 되돌릴 수 없으며, 현재 게임 월드를 삭제합니다.");
-        sender.sendMessage("§e계속하려면 §l/wd reset confirm§e 을 입력하세요.");
-        sender.sendMessage("§6=============================================");
+        sender.sendMessage(ChatColor.translateAlternateColorCodes('&', "&6============================================="));
+        sender.sendMessage(plugin.getMessage("command.reset.confirm-warning"));
+        sender.sendMessage(ChatColor.translateAlternateColorCodes('&', "&6============================================="));
     }
 
     private void resetGameAndWorld(CommandSender sender) {
-        Bukkit.broadcastMessage("§c⚠️ 관리자에 의해 전체 게임 초기화가 시작되었습니다. 잠시 렉이 발생할 수 있습니다.");
-        sender.sendMessage("§a[WD] 초기화 작업을 시작합니다...");
+        Bukkit.broadcastMessage(plugin.getMessage("command.reset.broadcast-start"));
+        sender.sendMessage(plugin.getMessage("command.reset.admin-start"));
 
-        // 1. Reset internal game systems
-        sender.sendMessage("§a[WD] 게임 상태, 팀, TPA 정보를 초기화합니다...");
+        // GameManager의 resetGame이 모든 로직(플레이어 이동, 태스크 취소 등)을 처리합니다.
         gameManager.resetGame();
+        // 팀과 TPA 정보는 GameManager가 아닌 별도의 매니저에서 관리되므로 별도 초기화가 필요합니다.
         teamManager.resetTeams();
         tpaManager.resetTpa();
 
-        // 2. Evacuate players before touching worlds
-        sender.sendMessage("§a[WD] 모든 플레이어를 로비로 이동시킵니다...");
-        World lobbyWorld = Bukkit.getWorld("wildduel_world");
-        if (lobbyWorld == null) {
-            sender.sendMessage("§c[WD] 치명적 오류: 로비 월드를 찾을 수 없습니다! 초기화를 중단합니다.");
-            return;
-        }
-        for (Player player : Bukkit.getOnlinePlayers()) {
-            player.teleport(lobbyWorld.getSpawnLocation());
-        }
-
-        // 3. Recreate the game world using the centralized method
-        // This correctly targets 'wildduel_game' and handles unload/delete/create
-        WildDuel.getInstance().recreateGameWorld(() -> {
-            // 4. Finalize and notify
-            gameManager.initializeWorlds(); // Re-initialize world references in GameManager
-            Bukkit.broadcastMessage("§6✅ 게임과 월드가 성공적으로 초기화되었습니다!");
-            sender.sendMessage("§b[WD] 초기화 완료.");
-        });
-    }
-
-    
-
-    private void handlePlayerCommands(CommandSender sender, String[] args) {
-        if (!(sender instanceof Player)) {
-            sender.sendMessage("This command can only be used by a player.");
-            return;
-        }
-        Player player = (Player) sender;
-        if (!player.hasPermission("wildduel.admin")) {
-            player.sendMessage("You do not have permission to use this command.");
-            return;
-        }
-
-        switch (args[0].toLowerCase()) {
-            case "start":
-                gameManager.startGame();
-                sender.sendMessage("Game sequence initiated!");
-                break;
-            case "team":
-                new TeamAdminGUI(teamAdminManager, teamManager).open((Player) sender);
-                break;
-            case "randomteam":
-                teamManager.assignRandomTeams();
-                sender.sendMessage("All players have been assigned to random teams.");
-                break;
-            case "admin":
-                new AdminGUI(gameManager, teamManager, tpaManager, teamAdminManager).open((Player) sender);
-                break;
-            case "st":
-                if (args.length > 1) {
-                    try {
-                        int seconds = Integer.parseInt(args[1]);
-                        gameManager.addTime(seconds);
-                        sender.sendMessage("§bRemaining time adjusted by " + seconds + " seconds.");
-                    } catch (NumberFormatException e) {
-                        sender.sendMessage("§cInvalid number format.");
-                    }
-                } else {
-                    sender.sendMessage("§cUsage: /wd st <seconds>");
-                }
-                break;
-            case "autosmelt":
-                if (args.length > 1) {
-                    if (args[1].equalsIgnoreCase("on")) {
-                        gameManager.setAutoSmelt(true);
-                        sender.sendMessage("Auto-smelt enabled.");
-                    } else if (args[1].equalsIgnoreCase("off")) {
-                        gameManager.setAutoSmelt(false);
-                        sender.sendMessage("Auto-smelt disabled.");
-                    } else {
-                        sender.sendMessage("Usage: /wd autosmelt <on|off>");
-                    }
-                } else {
-                    sender.sendMessage("Usage: /wd autosmelt <on|off>");
-                }
-                break;
-            case "setinventory":
-                new StartItemGUI(WildDuel.getInstance().getDefaultStartInventory()).open(player);
-                player.sendMessage("§a시작 아이템 설정 GUI를 엽니다.");
-                break;
-        }
+        Bukkit.broadcastMessage(plugin.getMessage("command.reset.broadcast-complete"));
+        sender.sendMessage(plugin.getMessage("command.reset.admin-complete"));
     }
 
     private void handleAdminTpaCommands(CommandSender sender, String[] args) {
         if (!sender.hasPermission("wildduel.admin")) {
-            sender.sendMessage("You do not have permission to use this command.");
+            sender.sendMessage(plugin.getMessage("error.no-permission"));
             return;
         }
 
         switch (args[0].toLowerCase()) {
             case "tparefresh":
                 if (args.length < 2) {
-                    sender.sendMessage("§cUsage: /wd tparefresh <player|all>");
+                    sender.sendMessage(plugin.getMessage("command.tparefresh.usage"));
                     return;
                 }
                 if (args[1].equalsIgnoreCase("all")) {
                     tpaManager.refreshAllCooldowns();
-                    sender.sendMessage("§a[TPA] 전체 플레이어의 쿨타임을 초기화했습니다.");
+                    sender.sendMessage(plugin.getMessage("command.tparefresh.success-all"));
                 } else {
                     Player target = Bukkit.getPlayer(args[1]);
                     if (target == null) {
-                        sender.sendMessage("§c[TPA] 해당 플레이어는 온라인이 아닙니다.");
+                        sender.sendMessage(plugin.getMessage("error.player-not-found"));
                         return;
                     }
                     if (tpaManager.refreshCooldown(target)) {
-                        sender.sendMessage("§a[TPA] " + target.getName() + "님의 쿨타임을 초기화했습니다.");
+                        sender.sendMessage(plugin.getMessage("command.tparefresh.success-player", "%player%", target.getName()));
                     } else {
-                        sender.sendMessage("§c[TPA] " + target.getName() + "님은 현재 쿨타임이 없습니다.");
+                        sender.sendMessage(plugin.getMessage("command.tparefresh.no-cooldown", "%player%", target.getName()));
                     }
                 }
                 break;
             case "tpastatus":
                 if (args.length < 2) {
-                    sender.sendMessage("§cUsage: /wd tpastatus <player>");
+                    sender.sendMessage(plugin.getMessage("command.tpastatus.usage"));
                     return;
                 }
                 Player target = Bukkit.getPlayer(args[1]);
                 if (target == null) {
-                    sender.sendMessage("§c[TPA] 해당 플레이어는 온라인이 아닙니다.");
+                    sender.sendMessage(plugin.getMessage("error.player-not-found"));
                     return;
                 }
                 long remaining = tpaManager.getRemainingCooldown(target);
                 if (remaining > 0) {
                     long minutes = remaining / 60;
                     long seconds = remaining % 60;
-                    sender.sendMessage(String.format("§e[TPA] %s님의 남은 쿨타임: %d분 %d초", target.getName(), minutes, seconds));
+                    sender.sendMessage(plugin.getMessage("command.tpastatus.status", "%player%", target.getName(), "%minutes%", String.valueOf(minutes), "%seconds%", String.valueOf(seconds)));
                 } else {
-                    sender.sendMessage("§a[TPA] " + target.getName() + "님은 현재 쿨타임이 없습니다.");
+                    sender.sendMessage(plugin.getMessage("command.tpastatus.no-cooldown", "%player%", target.getName()));
                 }
                 break;
         }
     }
 
     private void sendHelpMessage(CommandSender sender) {
-        sender.sendMessage("§a--- 와일드 듀얼 명령어 목록 ---");
-        sender.sendMessage("§e/wd help §7- §f이 도움말을 표시합니다.");
-        sender.sendMessage("§e/wd admin §7- §f(추천) 모든 설정을 관리하는 GUI를 엽니다.");
-        sender.sendMessage("§e/wd setinventory §7- §f(추천) GUI를 통해 시작 아이템 인벤토리를 설정합니다.");
-        sender.sendMessage("§e/wd start §7- §f게임을 즉시 시작합니다.");
-        sender.sendMessage("§e/wd team §7- §f팀 관리 GUI를 엽니다.");
-        sender.sendMessage("§e/wd randomteam §7- §f모든 플레이어를 랜덤 팀에 배정합니다.");
-        sender.sendMessage("§e/wd st <seconds> §7- §f파밍 시간을 조절합니다 (양수/음수 가능).");
-        sender.sendMessage("§e/wd autosmelt <on|off> §7- §f자동 제련 기능을 켜거나 끕니다.");
-        sender.sendMessage("§e/wd reset [confirm] §7- §f게임과 월드를 초기화합니다. (confirm 필요)");
-        sender.sendMessage("§e/wd tparefresh <player|all> §7- §fTPA 쿨타임을 초기화합니다.");
-        sender.sendMessage("§e/wd tpastatus <player> §7- §fTPA 쿨타임 상태를 확인합니다.");
-        sender.sendMessage("§7- 상세 설정(스폰, 파밍 시간 등)은 /wd admin 패널을 이용해주세요.");
+        sender.sendMessage(plugin.getMessage("help.header"));
+        sender.sendMessage(" "); // Spacer
+        sender.sendMessage(plugin.getMessage("help.player.title"));
+        sender.sendMessage(plugin.getMessage("help.player.wd-help"));
+        sender.sendMessage(plugin.getMessage("help.player.team-select"));
+        sender.sendMessage(plugin.getMessage("help.player.tpa"));
+        sender.sendMessage(plugin.getMessage("help.player.tpacancel"));
+
+        if (sender.hasPermission("wildduel.admin")) {
+            sender.sendMessage(" "); // Spacer
+            sender.sendMessage(plugin.getMessage("help.admin.title"));
+            sender.sendMessage(plugin.getMessage("help.admin.admin-gui"));
+            sender.sendMessage(plugin.getMessage("help.admin.set-inventory"));
+            sender.sendMessage(plugin.getMessage("help.admin.start"));
+            sender.sendMessage(plugin.getMessage("help.admin.random-team"));
+            sender.sendMessage(plugin.getMessage("help.admin.add-time"));
+            sender.sendMessage(plugin.getMessage("help.admin.autosmelt"));
+            sender.sendMessage(plugin.getMessage("help.admin.reset"));
+            sender.sendMessage(plugin.getMessage("help.admin.tpa-refresh"));
+            sender.sendMessage(plugin.getMessage("help.admin.tpa-status"));
+        }
+        sender.sendMessage(" "); // Spacer
+        sender.sendMessage(plugin.getMessage("help.footer"));
     }
 }

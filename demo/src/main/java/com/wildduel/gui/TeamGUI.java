@@ -1,14 +1,16 @@
 package com.wildduel.gui;
 
+import com.wildduel.WildDuel;
 import com.wildduel.game.TeamManager;
-
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
+import org.bukkit.NamespacedKey;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.persistence.PersistentDataType;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -16,6 +18,7 @@ import java.util.List;
 public class TeamGUI {
 
     private final TeamManager teamManager;
+    public static final NamespacedKey TEAM_NAME_KEY = new NamespacedKey(WildDuel.getInstance(), "team_name");
 
     public TeamGUI(TeamManager teamManager) {
         this.teamManager = teamManager;
@@ -28,6 +31,7 @@ public class TeamGUI {
             ItemStack teamItem = new ItemStack(getWoolMaterial(team.getColor()), 1);
             ItemMeta meta = teamItem.getItemMeta();
             meta.setDisplayName(team.getColor() + team.getName() + " 팀 참가");
+            meta.getPersistentDataContainer().set(TEAM_NAME_KEY, PersistentDataType.STRING, team.getName());
             List<String> lore = new ArrayList<>();
             lore.add("§7클릭하여 이 팀에 합류합니다.");
             lore.add(" ");
