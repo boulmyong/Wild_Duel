@@ -60,7 +60,10 @@ public class PlayerEventListener implements Listener {
     @EventHandler
     public void onPlayerJoin(PlayerJoinEvent event) {
         Player player = event.getPlayer();
-        teamManager.applyTeamVisualsOnJoin(player);
+        
+        // Ensure player is not in a team when they join
+        teamManager.leaveTeam(player);
+
         GameState gameState = gameManager.getGameState();
 
         if (gameState == GameState.FARMING || gameState == GameState.BATTLE) {

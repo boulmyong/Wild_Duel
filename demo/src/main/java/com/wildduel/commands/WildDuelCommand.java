@@ -45,6 +45,27 @@ public class WildDuelCommand implements CommandExecutor {
                 sendHelpMessage(sender);
                 break;
             case "start":
+                if (!(sender instanceof Player)) {
+                    sender.sendMessage(plugin.getMessage("error.player-only"));
+                    return true;
+                }
+                gameManager.askAdminToStart((Player) sender);
+                break;
+            case "regen_world_confirm":
+                if (!sender.hasPermission("wildduel.admin")) {
+                    sender.sendMessage(plugin.getMessage("error.no-permission"));
+                    return true;
+                }
+                sender.sendMessage(ChatColor.AQUA + "월드 재생성을 시작합니다. 모든 플레이어가 서버에서 추방됩니다.");
+                gameManager.executeWorldRegeneration();
+                break;
+            case "start_game_final":
+                if (!sender.hasPermission("wildduel.admin")) {
+                    sender.sendMessage(plugin.getMessage("error.no-permission"));
+                    return true;
+                }
+                gameManager.executeGameStart();
+                break;
             case "team":
             case "randomteam":
             case "admin":
@@ -77,13 +98,6 @@ public class WildDuelCommand implements CommandExecutor {
         Player player = (sender instanceof Player) ? (Player) sender : null;
 
         switch (args[0].toLowerCase()) {
-            case "start":
-                if (gameManager.startGame()) {
-                    sender.sendMessage(plugin.getMessage("command.start.success"));
-                } else {
-                    sender.sendMessage(plugin.getMessage("command.start.fail", "%reason%", "게임 상태가 로비가 아니거나, 플레이어가 2명 미만입니다."));
-                }
-                break;
             case "team":
                 if (player == null) {
                     sender.sendMessage(plugin.getMessage("error.player-only"));
@@ -158,7 +172,9 @@ public class WildDuelCommand implements CommandExecutor {
         }
 
         sender.sendMessage(ChatColor.translateAlternateColorCodes('&', "&6============================================="));
-        sender.sendMessage(plugin.getMessage("command.reset.confirm-warning"));
+        sender.sendMessage(ChatColor.RED + "경고: 이 명령어는 게임을 강제 초기화하고,");
+        sender.sendMessage(ChatColor.RED + "다음 게임을 위해 월드를 재생성하며, 모든 플레이어를 서버에서 추방합니다.");
+        sender.sendMessage(ChatColor.YELLOW + "계속하려면 /wd reset confirm 명령어를 입력해주세요.");
         sender.sendMessage(ChatColor.translateAlternateColorCodes('&', "&6============================================="));
     }
 

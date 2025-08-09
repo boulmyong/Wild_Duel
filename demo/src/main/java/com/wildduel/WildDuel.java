@@ -9,7 +9,6 @@ import com.wildduel.listeners.AdminGUIListener;
 import com.wildduel.listeners.PlayerEventListener;
 import com.wildduel.listeners.TeamAdminGUIListener;
 import com.wildduel.listeners.TeamGUIListener;
-import com.wildduel.listeners.TpaListener;
 import com.wildduel.util.EmptyWorldGenerator;
 import org.bukkit.Bukkit;
 import org.bukkit.World;
@@ -81,7 +80,7 @@ public class WildDuel extends JavaPlugin {
 
         getServer().getPluginManager().registerEvents(new PlayerEventListener(gameManager, teamManager), this);
         getServer().getPluginManager().registerEvents(new TeamAdminGUIListener(teamAdminManager, teamManager), this);
-        getServer().getPluginManager().registerEvents(new TpaListener(tpaManager), this);
+        
         getServer().getPluginManager().registerEvents(new AdminGUIListener(this, gameManager, teamManager, tpaManager, teamAdminManager), this);
         getServer().getPluginManager().registerEvents(new TeamGUIListener(teamManager), this);
         getServer().getPluginManager().registerEvents(new StartItemGUIListener(this), this);
@@ -105,7 +104,7 @@ public class WildDuel extends JavaPlugin {
     @Override
     public void onDisable() {
         if (gameManager != null) {
-            gameManager.resetGame();
+            gameManager.shutdown();
         }
         getLogger().info("WildDuel plugin disabled!");
     }

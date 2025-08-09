@@ -1,6 +1,10 @@
 package com.wildduel.game;
 
 import com.wildduel.WildDuel;
+import net.md_5.bungee.api.chat.ClickEvent;
+import net.md_5.bungee.api.chat.HoverEvent;
+import net.md_5.bungee.api.chat.TextComponent;
+import net.md_5.bungee.api.chat.hover.content.Text;
 import org.bukkit.*;
 import org.bukkit.boss.BarColor;
 import org.bukkit.boss.BarStyle;
@@ -23,6 +27,7 @@ public class GameManager {
 
     private final TeamManager teamManager;
     private volatile GameState gameState = GameState.LOBBY;
+    private volatile boolean isWorldRegenerating = false;
     private World lobbyWorld;
     private World gameWorld;
 
@@ -35,6 +40,7 @@ public class GameManager {
 
     private boolean autoSmeltEnabled = false;
     private boolean playerTeamSelectionEnabled = false;
+    private boolean isTeamGameMode = false;
 
     public GameManager(TeamManager teamManager) {
         this.teamManager = teamManager;
@@ -48,10 +54,8 @@ public class GameManager {
         this.lobbyWorld = Bukkit.getWorld("wildduel_world");
         if (this.lobbyWorld == null) {
             WildDuel.getInstance().getLogger().severe("로비 월드(wildduel_world)를 찾을 수 없습니다! 플러그인이 정상적으로 동작하지 않을 수 있습니다.");
-            return; // 초기화 중단
+            return;
         }
-
-        this.gameWorld = Bukkit.getWorld("wildduel_game"); // Default world
         
         lobbyWorld.setGameRule(GameRule.DO_DAYLIGHT_CYCLE, false);
         lobbyWorld.setGameRule(GameRule.DO_WEATHER_CYCLE, false);
@@ -65,10 +69,12 @@ public class GameManager {
     public void transitionToLobby() {
         setGameState(GameState.LOBBY);
         if (lobbyWorld == null) return;
-        applySaturationEffectPeriodically(lobbyWorld);
+
         for (Player player : Bukkit.getOnlinePlayers()) {
             preparePlayerForLobby(player);
         }
+        
+        applySaturationEffectPeriodically(lobbyWorld);
     }
 
     public void preparePlayerForLobby(Player player) {
@@ -105,15 +111,89 @@ public class GameManager {
         }
     }
 
-    public synchronized boolean startGame() {
+    public void askAdminToStart(Player admin) {
+        TextComponent message = new TextComponent(ChatColor.YELLOW + "어떤 작업을 수행하시겠습니까? ");
+
+        TextComponent regenLink = new TextComponent(ChatColor.RED + "[월드 재생성]");
+        regenLink.setClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/wd regen_world_confirm"));
+        regenLink.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, new Text("§c모든 플레이어를 내보내고 맵을 초기화합니다.\n§c(서버 랙 유발)")));
+
+        TextComponent startLink = new TextComponent(ChatColor.GREEN + "[즉시 시작]");
+        startLink.setClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/wd start_game_final"));
+        startLink.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, new Text("§a현재 준비된 월드에서 즉시 게임을 시작합니다.")));
+
+        message.addExtra(regenLink);
+        message.addExtra(new TextComponent(ChatColor.GRAY + " 또는 "));
+        message.addExtra(startLink);
+
+        admin.spigot().sendMessage(message);
+    }
+
+    public void executeWorldRegeneration() {
+        if (isWorldRegenerating) {
+            Bukkit.broadcastMessage(ChatColor.RED + "게임 월드가 이미 생성중입니다. 잠시 후 다시 시도해주세요.");
+            return;
+        }
+        isWorldRegenerating = true;
+        Bukkit.setWhitelist(true);
+        WildDuel.getInstance().getLogger().info("월드 재생성을 위해 화이트리스트를 활성화합니다.");
+
+        for (Player player : Bukkit.getOnlinePlayers()) {
+            player.kickPlayer(ChatColor.GREEN + "서버 관리자가 게임 월드를 재생성하고 있습니다. 잠시 후 다시 접속해주세요.");
+        }
+
+        new BukkitRunnable() {
+            @Override
+            public void run() {
+                WildDuel.getInstance().getLogger().info("플레이어 처리 후 월드 재생성을 시작합니다...");
+                recreateGameWorldAsync().whenComplete((newWorld, ex) -> {
+                    isWorldRegenerating = false;
+                    Bukkit.setWhitelist(false);
+                    WildDuel.getInstance().getLogger().info("월드 재생성이 완료되어 화이트리스트를 비활성화합니다.");
+                    if (ex != null) {
+                        WildDuel.getInstance().getLogger().log(Level.SEVERE, "게임 월드 생성에 실패했습니다. 플러그인을 확인해주세요.", ex);
+                        GameManager.this.gameWorld = null;
+                    } else {
+                        GameManager.this.gameWorld = newWorld;
+                        WildDuel.getInstance().getLogger().info("다음 게임을 위한 월드 준비가 완료되었습니다.");
+                    }
+                });
+            }
+        }.runTaskLater(WildDuel.getInstance(), 60L); // 3-second delay
+    }
+
+    public void executeGameStart() {
         if (getGameState() != GameState.LOBBY) {
-            return false; // Not in lobby state
+            Bukkit.broadcastMessage(ChatColor.RED + "게임이 로비 상태일 때만 시작할 수 있습니다.");
+            return;
         }
-        if (lobbyWorld == null || lobbyWorld.getPlayers().size() < 2) {
-            return false; // Not enough players
+        if (isWorldRegenerating) {
+            Bukkit.broadcastMessage(ChatColor.RED + "게임 월드가 생성중입니다. 잠시 후 다시 시도해주세요.");
+            return;
         }
+        if (gameWorld == null) {
+            Bukkit.broadcastMessage(ChatColor.RED + "게임 월드가 아직 준비되지 않았습니다. 먼저 [월드 재생성]을 실행해주세요.");
+            return;
+        }
+
+        List<Player> participants = new ArrayList<>(lobbyWorld.getPlayers());
+        if (participants.size() < 2) {
+            Bukkit.broadcastMessage(ChatColor.RED + "게임 시작을 위한 최소 인원은 2명입니다.");
+            return;
+        }
+
+        // Determine game mode and validate teams
+        this.isTeamGameMode = participants.stream().anyMatch(p -> teamManager.getPlayerTeam(p) != null);
+        if (this.isTeamGameMode) {
+            for (Player player : participants) {
+                if (teamManager.getPlayerTeam(player) == null) {
+                    Bukkit.broadcastMessage(ChatColor.RED + "팀전에 참여하지 않은 플레이어가 있습니다. 모든 플레이어를 팀에 배정해주세요.");
+                    return;
+                }
+            }
+        }
+
         startCountdown();
-        return true;
     }
 
     private void startCountdown() {
@@ -141,47 +221,39 @@ public class GameManager {
     }
 
     private void transitionToFarming() {
-        recreateGameWorldAsync().thenAccept(newGameWorld -> {
-            // This code runs on the main server thread after the world is ready.
-            this.gameWorld = newGameWorld;
+        setGameState(GameState.FARMING);
+        this.prepTimeSeconds = this.initialPrepTimeSeconds;
 
-            setGameState(GameState.FARMING);
-            this.prepTimeSeconds = this.initialPrepTimeSeconds;
+        gameWorld.setGameRule(GameRule.KEEP_INVENTORY, true);
+        gameWorld.setPVP(false);
+        WorldBorder border = gameWorld.getWorldBorder();
+        border.setCenter(gameWorld.getSpawnLocation());
+        border.setSize(1000);
 
-            gameWorld.setGameRule(GameRule.KEEP_INVENTORY, true);
-            gameWorld.setPVP(false);
-            WorldBorder border = gameWorld.getWorldBorder();
-            border.setCenter(gameWorld.getSpawnLocation());
-            border.setSize(1000);
+        applySaturationEffectPeriodically(gameWorld);
 
-            applySaturationEffectPeriodically(newGameWorld); // 수정된 부분
+        List<Player> playersToTeleport = new ArrayList<>(lobbyWorld.getPlayers());
+        List<CompletableFuture<Boolean>> teleportFutures = new ArrayList<>();
 
-            List<Player> playersToTeleport = new ArrayList<>(lobbyWorld.getPlayers());
-            List<CompletableFuture<Boolean>> teleportFutures = new ArrayList<>();
-
-            for (Player player : playersToTeleport) {
-                teleportFutures.add(teleportToCenter(player, newGameWorld));
-                player.setGameMode(GameMode.SURVIVAL);
-                player.setExp(0F);
-                player.setLevel(0);
-                player.getInventory().clear();
-                for (PotionEffect effect : player.getActivePotionEffects()) {
-                    player.removePotionEffect(effect.getType());
-                }
-                WildDuel.getInstance().getDefaultStartInventory().apply(player);
+        for (Player player : playersToTeleport) {
+            teleportFutures.add(teleportToCenter(player, gameWorld));
+            player.setGameMode(GameMode.SURVIVAL);
+            player.setExp(0F);
+            player.setLevel(0);
+            player.getInventory().clear();
+            for (PotionEffect effect : player.getActivePotionEffects()) {
+                player.removePotionEffect(effect.getType());
             }
+            WildDuel.getInstance().getDefaultStartInventory().apply(player);
+        }
 
-            CompletableFuture.allOf(teleportFutures.toArray(new CompletableFuture[0])).thenRun(this::startTimer);
-
-        }).exceptionally(ex -> {
-            Bukkit.broadcastMessage(ChatColor.RED + "게임 월드 생성에 실패했습니다. 게임 시작이 중단됩니다.");
-            WildDuel.getInstance().getLogger().log(Level.SEVERE, "게임 월드 재생성 중 심각한 오류 발생", ex);
-            resetGame();
-            return null; // Handle the exception
-        });
+        CompletableFuture.allOf(teleportFutures.toArray(new CompletableFuture[0])).thenRun(this::startTimer);
     }
 
+    
+
     private CompletableFuture<World> recreateGameWorldAsync() {
+        // Phase 1: Unload world (on main thread)
         return CompletableFuture.supplyAsync(() -> {
             World world = Bukkit.getWorld("wildduel_game");
             if (world != null) {
@@ -194,15 +266,17 @@ public class GameManager {
             }
             return new File(Bukkit.getWorldContainer(), "wildduel_game");
         }, runnable -> Bukkit.getScheduler().runTask(WildDuel.getInstance(), runnable))
-        .thenComposeAsync(worldFolder -> CompletableFuture.runAsync(() -> {
+        // Phase 2: Delete world folder (async)
+        .thenCompose(worldFolder -> CompletableFuture.runAsync(() -> {
             if (worldFolder.exists()) {
                 WildDuel.getInstance().getLogger().info("기존 월드 폴더를 삭제합니다: " + worldFolder.getName());
-                if (!deleteWorld(worldFolder)) {
+                if (!deleteWorldRecursively(worldFolder)) {
                     throw new RuntimeException("월드 폴더 삭제에 실패했습니다: " + worldFolder.getName());
                 }
                 WildDuel.getInstance().getLogger().info("월드 폴더 삭제 완료.");
             }
-        }, runnable -> WildDuel.getInstance().getServer().getAsyncScheduler().runNow(WildDuel.getInstance(), task -> runnable.run())))
+        }, runnable -> WildDuel.getInstance().getServer().getAsyncScheduler().runNow(WildDuel.getInstance(), scheduledTask -> runnable.run())))
+        // Phase 3: Create new world (on main thread)
         .thenCompose(v -> CompletableFuture.supplyAsync(() -> {
             WildDuel.getInstance().getLogger().info("새로운 게임 월드를 생성합니다...");
             WorldCreator wc = new WorldCreator("wildduel_game");
@@ -216,15 +290,19 @@ public class GameManager {
         }, runnable -> Bukkit.getScheduler().runTask(WildDuel.getInstance(), runnable)));
     }
 
-    private boolean deleteWorld(File path) {
+    private boolean deleteWorldRecursively(File path) {
         if (path.exists()) {
             File[] files = path.listFiles();
             if (files != null) {
                 for (File file : files) {
                     if (file.isDirectory()) {
-                        deleteWorld(file);
+                        if (!deleteWorldRecursively(file)) {
+                            WildDuel.getInstance().getLogger().warning("Failed to delete sub-directory: " + file.getAbsolutePath());
+                            return false;
+                        }
                     } else {
                         if (!file.delete()) {
+                            WildDuel.getInstance().getLogger().warning("Failed to delete file: " + file.getAbsolutePath());
                             return false;
                         }
                     }
@@ -292,28 +370,69 @@ public class GameManager {
     public synchronized void checkWinCondition() {
         if (getGameState() != GameState.BATTLE || gameWorld == null) return;
 
-        List<TeamManager.TeamData> activeTeams = new ArrayList<>();
-        for (TeamManager.TeamData teamData : teamManager.getTeams()) {
-            boolean hasAliveMembers = teamData.getPlayers().stream()
-                    .anyMatch(p -> p.isOnline() && p.getGameMode() == GameMode.SURVIVAL && p.getWorld().equals(gameWorld));
-            if (hasAliveMembers) {
-                activeTeams.add(teamData);
-            }
-        }
+        List<Player> alivePlayers = gameWorld.getPlayers().stream()
+                .filter(p -> p.getGameMode() == GameMode.SURVIVAL && p.isOnline())
+                .toList();
 
-        if (activeTeams.size() <= 1) {
-            endGame(activeTeams.isEmpty() ? null : activeTeams.get(0));
+        if (isTeamGameMode) {
+            // Team Game Logic
+            List<TeamManager.TeamData> activeTeams = new ArrayList<>();
+            for (TeamManager.TeamData teamData : teamManager.getTeams()) {
+                if (teamData.getPlayers().stream().anyMatch(alivePlayers::contains)) {
+                    activeTeams.add(teamData);
+                }
+            }
+
+            if (activeTeams.size() <= 1) {
+                endGame(activeTeams.isEmpty() ? null : activeTeams.get(0));
+            }
+        } else {
+            // FFA Logic
+            if (alivePlayers.size() <= 1) {
+                endGame(alivePlayers.isEmpty() ? null : alivePlayers.get(0));
+            }
         }
     }
 
-    private synchronized void endGame(TeamManager.TeamData winner) {
+    private void endGame(Player winner) {
         if (getGameState() == GameState.ENDED) return;
         setGameState(GameState.ENDED);
-        String winnerMessage = winner != null ? winner.getColor() + winner.getName() + " 팀 승리!" : "게임이 무승부로 종료되었습니다!";
+
+        String winnerMessage = "§a" + winner.getName() + "님 승리!";
+        String broadcastWinner = "§f승리: §a" + winner.getName() + "님!";
+
+        broadcastEndMessage(winnerMessage, broadcastWinner);
+    }
+
+    private void endGame(TeamManager.TeamData winner) {
+        if (getGameState() == GameState.ENDED) return;
+        setGameState(GameState.ENDED);
+
+        String winnerMessage;
+        String broadcastWinner;
+
+        if (winner != null && !winner.getPlayers().isEmpty()) {
+            if (winner.getPlayers().size() == 1) {
+                Player soloWinner = new ArrayList<>(winner.getPlayers()).get(0);
+                winnerMessage = "§a" + soloWinner.getName() + "님 승리!";
+                broadcastWinner = "§f승리: §a" + soloWinner.getName() + "님!";
+            } else {
+                winnerMessage = winner.getColor() + winner.getName() + " 팀 승리!";
+                broadcastWinner = "§f승리: " + winner.getColor() + winner.getName() + " 팀!";
+            }
+        } else {
+            winnerMessage = "게임이 무승부로 종료되었습니다!";
+            broadcastWinner = "§f승리: 무승부!";
+        }
+
+        broadcastEndMessage(winnerMessage, broadcastWinner);
+    }
+
+    private void broadcastEndMessage(String winnerMessage, String broadcastWinner) {
         Bukkit.broadcastMessage("§a========================================");
         Bukkit.broadcastMessage("§e           게임 종료");
         Bukkit.broadcastMessage(" ");
-        Bukkit.broadcastMessage("§f승리: " + (winner != null ? winner.getColor() + winner.getName() + " 팀!" : "무승부!"));
+        Bukkit.broadcastMessage(broadcastWinner);
         Bukkit.broadcastMessage("§a========================================");
 
         for (Player player : Bukkit.getOnlinePlayers()) {
@@ -343,9 +462,20 @@ public class GameManager {
         playerTeamSelectionEnabled = false;
         initialPrepTimeSeconds = 900;
 
-        if (gameWorld != null) {
-            gameWorld.getWorldBorder().reset();
-            gameWorld.setPVP(false);
+        if (this.gameWorld != null) {
+            WildDuel.getInstance().getLogger().info("게임 월드 정리 중...");
+            World worldToClean = this.gameWorld;
+            this.gameWorld = null; 
+            CompletableFuture.runAsync(() -> {
+                Bukkit.getScheduler().runTask(WildDuel.getInstance(), () -> {
+                    if(worldToClean != null) {
+                        Bukkit.unloadWorld(worldToClean, false);
+                    }
+                });
+            }).thenRunAsync(() -> {
+                deleteWorldRecursively(worldToClean.getWorldFolder());
+                WildDuel.getInstance().getLogger().info("게임 월드 정리 완료.");
+            });
         }
 
         transitionToLobby();
@@ -402,5 +532,13 @@ public class GameManager {
         if (getGameState() == GameState.BATTLE || getGameState() == GameState.FARMING) {
             Bukkit.getScheduler().runTask(WildDuel.getInstance(), this::checkWinCondition);
         }
+    }
+
+    public synchronized void shutdown() {
+        if (gameTask != null) gameTask.cancel();
+        if (saturationTask != null) saturationTask.cancel();
+        if (timerBar != null) timerBar.removeAll();
+        if (distanceDisplayTask != null) distanceDisplayTask.cancel();
+        WildDuel.getInstance().getLogger().info("All game tasks cancelled for shutdown.");
     }
 }

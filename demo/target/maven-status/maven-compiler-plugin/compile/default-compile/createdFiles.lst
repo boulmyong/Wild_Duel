@@ -21,6 +21,7 @@ com\wildduel\gui\TeamAdminGUI$1.class
 com\wildduel\game\GameManager$1.class
 com\wildduel\commands\TeamSelectCommand.class
 com\wildduel\gui\AdminGUI.class
+com\wildduel\game\GameManager$6.class
 com\wildduel\commands\TpaCommand.class
 com\wildduel\gui\TeamGUI.class
 com\wildduel\gui\TeamAdminGUI.class
@@ -33,7 +34,6 @@ com\wildduel\commands\TpaStatusCommand.class
 com\wildduel\game\GameManager$5.class
 com\wildduel\listeners\TeamAdminGUIListener.class
 com\wildduel\util\EmptyWorldGenerator.class
-com\wildduel\listeners\TpaListener.class
 com\wildduel\game\GameManager$3.class
 com\wildduel\gui\StartItemGUI.class
 com\wildduel\listeners\PlayerEventListener.class

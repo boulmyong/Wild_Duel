@@ -1,7 +1,7 @@
 name: WildDuel
-version: 3.1
+version: 3.4
 main: com.wildduel.WildDuel
-api-version: 1.21
+api-version: 1.21.7
 commands:
   wd:
     description: 와일드 듀얼 메인 명령어입니다. /wd help로 모든 명령어를 확인하세요.

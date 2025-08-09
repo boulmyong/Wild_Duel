@@ -1,0 +1,20 @@
+# WildDuel Plugin Configuration
+
+tpa-request-timeout: 60
+tpa-cooldown-seconds: 180
+
+default-start-items:
+  - material: STONE_AXE
+    amount: 1
+  - material: STONE_PICKAXE
+    amount: 1
+
+# Auto-smelt mappings: When a key block is broken, it drops the value item.
+auto-smelt-mapping:
+  IRON_ORE: IRON_INGOT
+  GOLD_ORE: GOLD_INGOT
+  COPPER_ORE: COPPER_INGOT
+  ANCIENT_DEBRIS: NETHERITE_SCRAP
+  DEEPSLATE_IRON_ORE: IRON_INGOT
+  DEEPSLATE_GOLD_ORE: GOLD_INGOT
+  DEEPSLATE_COPPER_ORE: COPPER_INGOT
