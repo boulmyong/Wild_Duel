@@ -51,7 +51,7 @@ public class PlayerEventListener implements Listener {
                     Material to = Material.valueOf(section.getString(key, "").toUpperCase());
                     smeltMap.put(from, to);
                 } catch (IllegalArgumentException e) {
-                    WildDuel.getInstance().getLogger().warning("[AutoSmelt] Invalid material name in config.yml: " + key + " or " + section.getString(key));
+                    WildDuel.getInstance().getLogger().warning(WildDuel.getInstance().getMessage("log.autosmelt.invalid-material", "%key%", key, "%value%", section.getString(key)));
                 }
             }
         }
@@ -70,7 +70,7 @@ public class PlayerEventListener implements Listener {
             // Spectator for ongoing games
             player.setGameMode(GameMode.SPECTATOR);
             player.teleport(gameManager.getLobbyWorld().getSpawnLocation());
-            player.sendMessage("§e게임이 이미 진행 중입니다. 관전 모드로 전환됩니다.");
+            player.sendMessage(WildDuel.getInstance().getMessage("info.game-in-progress-spectator"));
         } else { // LOBBY, COUNTDOWN, ENDED
             // Go to lobby
             gameManager.preparePlayerForLobby(player);

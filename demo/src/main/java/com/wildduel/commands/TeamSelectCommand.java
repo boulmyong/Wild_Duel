@@ -1,10 +1,9 @@
 package com.wildduel.commands;
 
+import com.wildduel.WildDuel;
 import com.wildduel.game.GameManager;
 import com.wildduel.game.GameState;
-import com.wildduel.game.TeamManager;
 import com.wildduel.gui.TeamGUI;
-
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
@@ -12,34 +11,36 @@ import org.bukkit.entity.Player;
 
 public class TeamSelectCommand implements CommandExecutor {
 
+    private final WildDuel plugin;
+    private final TeamGUI teamGUI;
     private final GameManager gameManager;
-    private final TeamManager teamManager;
 
-    public TeamSelectCommand(GameManager gameManager, TeamManager teamManager) {
+    public TeamSelectCommand(WildDuel plugin, TeamGUI teamGUI, GameManager gameManager) {
+        this.plugin = plugin;
+        this.teamGUI = teamGUI;
         this.gameManager = gameManager;
-        this.teamManager = teamManager;
     }
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (!(sender instanceof Player)) {
-            sender.sendMessage("이 명령어는 플레이어만 사용할 수 있습니다.");
+            sender.sendMessage(plugin.getMessage("error.player-only"));
             return true;
         }
 
         Player player = (Player) sender;
 
         if (!gameManager.isPlayerTeamSelectionEnabled()) {
-            player.sendMessage("§c팀 선택 기능이 현재 비활성화되어 있습니다.");
-            return true;
-        }
-        
-        if (gameManager.getGameState() == GameState.FARMING || gameManager.getGameState() == GameState.BATTLE) {
-            player.sendMessage("§c게임 중에는 팀을 변경할 수 없습니다.");
+            player.sendMessage(plugin.getMessage("command.teamselect.disabled"));
             return true;
         }
 
-        new TeamGUI(teamManager).open(player);
+        if (gameManager.getGameState() == GameState.FARMING || gameManager.getGameState() == GameState.BATTLE) {
+            player.sendMessage(plugin.getMessage("command.teamselect.game-in-progress"));
+            return true;
+        }
+
+        teamGUI.open(player);
         return true;
     }
 }

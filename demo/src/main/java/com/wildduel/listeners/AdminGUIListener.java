@@ -36,7 +36,7 @@ public class AdminGUIListener implements Listener {
     @EventHandler
     public void onInventoryClick(InventoryClickEvent event) {
         InventoryView view = event.getView();
-        if (!view.getTitle().equals("§4[관리자 패널] 와일드 듀얼")) {
+        if (!view.getTitle().equals(plugin.getMessage("gui.admin.title"))) {
             return;
         }
 
@@ -72,7 +72,7 @@ public class AdminGUIListener implements Listener {
                 toggleAutoSmelt(admin);
                 break;
             case PLAYER_HEAD: // Manual Team Assign
-                new TeamAdminGUI(teamAdminManager, teamManager).open(admin);
+                new TeamAdminGUI(plugin, teamAdminManager, teamManager).open(admin);
                 refreshGui = false;
                 break;
             case ENDER_PEARL: // Reset TPA Cooldowns

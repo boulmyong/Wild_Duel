@@ -1,5 +1,6 @@
 package com.wildduel.listeners;
 
+import com.wildduel.WildDuel;
 import com.wildduel.game.TeamAdminManager;
 import com.wildduel.game.TeamManager;
 import com.wildduel.game.TeamType;
@@ -20,10 +21,12 @@ import java.util.UUID;
 
 public class TeamAdminGUIListener implements Listener {
 
+    private final WildDuel plugin;
     private final TeamAdminManager adminManager;
     private final TeamManager teamManager;
 
-    public TeamAdminGUIListener(TeamAdminManager adminManager, TeamManager teamManager) {
+    public TeamAdminGUIListener(WildDuel plugin, TeamAdminManager adminManager, TeamManager teamManager) {
+        this.plugin = plugin;
         this.adminManager = adminManager;
         this.teamManager = teamManager;
     }
@@ -31,7 +34,7 @@ public class TeamAdminGUIListener implements Listener {
     @EventHandler
     public void onInventoryClick(InventoryClickEvent event) {
         InventoryView view = event.getView();
-        if (!view.getTitle().equals("§8팀 수동 배정")) {
+        if (!view.getTitle().equals(plugin.getMessage("gui.teamadmin.title"))) {
             return;
         }
 
@@ -78,7 +81,7 @@ public class TeamAdminGUIListener implements Listener {
         }
 
         if (refreshGui) {
-            new TeamAdminGUI(adminManager, teamManager).open(admin);
+            new TeamAdminGUI(plugin, adminManager, teamManager).open(admin);
         }
     }
 
@@ -87,33 +90,33 @@ public class TeamAdminGUIListener implements Listener {
         TeamType selectedTeam = selection.getSelectedTeam();
 
         if (selectedPlayerUUID == null) {
-            admin.sendMessage("§c먼저 플레이어를 선택해주세요.");
+            admin.sendMessage(plugin.getMessage("gui.teamadmin.error.no-player-selected"));
             return;
         }
         if (selectedTeam == null) {
-            admin.sendMessage("§c변경할 팀을 선택해주세요.");
+            admin.sendMessage(plugin.getMessage("gui.teamadmin.error.no-team-selected"));
             return;
         }
 
         Player selectedPlayer = Bukkit.getPlayer(selectedPlayerUUID);
         if (selectedPlayer == null) {
-            admin.sendMessage("§c해당 플레이어는 오프라인 상태입니다.");
+            admin.sendMessage(plugin.getMessage("gui.teamadmin.error.player-offline"));
             return;
         }
 
         if (selectedTeam == TeamType.RED || selectedTeam == TeamType.BLUE) {
             teamManager.joinTeam(selectedPlayer, selectedTeam.getName());
-            admin.sendMessage(String.format("§a%s님을 %s 팀으로 설정했습니다.", selectedPlayer.getName(), selectedTeam.getName()));
-            selectedPlayer.sendMessage("§e[관리자] " + admin.getName() + "님이 당신을 " + selectedTeam.getColor() + selectedTeam.getName() + "§e 팀으로 옮겼습니다.");
+            admin.sendMessage(plugin.getMessage("gui.teamadmin.success.set-team", "%player%", selectedPlayer.getName(), "%team%", selectedTeam.getName()));
+            selectedPlayer.sendMessage(plugin.getMessage("gui.teamadmin.info.team-changed", "%admin%", admin.getName(), "%teamcolor%", selectedTeam.getColor().toString(), "%team%", selectedTeam.getName()));
         } else {
             teamManager.leaveTeam(selectedPlayer);
             if (selectedTeam == TeamType.SPECTATOR) {
                 selectedPlayer.setGameMode(GameMode.SPECTATOR);
-                admin.sendMessage(String.format("§a%s님을 관전자로 설정했습니다.", selectedPlayer.getName()));
-                selectedPlayer.sendMessage("§e[관리자] " + admin.getName() + "님이 당신을 관전자로 설정했습니다.");
+                admin.sendMessage(plugin.getMessage("gui.teamadmin.success.set-spectator", "%player%", selectedPlayer.getName()));
+                selectedPlayer.sendMessage(plugin.getMessage("gui.teamadmin.info.spectator-set", "%admin%", admin.getName()));
             } else { // NONE
-                admin.sendMessage(String.format("§a%s님을 소속 없는 상태로 설정했습니다.", selectedPlayer.getName()));
-                selectedPlayer.sendMessage("§e[관리자] " + admin.getName() + "님이 당신을 팀에서 제외했습니다.");
+                admin.sendMessage(plugin.getMessage("gui.teamadmin.success.set-no-team", "%player%", selectedPlayer.getName()));
+                selectedPlayer.sendMessage(plugin.getMessage("gui.teamadmin.info.removed-from-team", "%admin%", admin.getName()));
             }
         }
     }

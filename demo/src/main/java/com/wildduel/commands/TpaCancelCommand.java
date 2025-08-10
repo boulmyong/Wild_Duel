@@ -1,5 +1,6 @@
 package com.wildduel.commands;
 
+import com.wildduel.WildDuel;
 import com.wildduel.game.TpaManager;
 import com.wildduel.game.TpaRequest;
 
@@ -11,16 +12,18 @@ import org.bukkit.entity.Player;
 
 public class TpaCancelCommand implements CommandExecutor {
 
+    private final WildDuel plugin;
     private final TpaManager tpaManager;
 
-    public TpaCancelCommand(TpaManager tpaManager) {
+    public TpaCancelCommand(WildDuel plugin, TpaManager tpaManager) {
+        this.plugin = plugin;
         this.tpaManager = tpaManager;
     }
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (!(sender instanceof Player)) {
-            sender.sendMessage("This command can only be used by a player.");
+            sender.sendMessage(plugin.getMessage("error.player-only"));
             return true;
         }
 
@@ -28,7 +31,7 @@ public class TpaCancelCommand implements CommandExecutor {
         TpaRequest request = tpaManager.getPendingRequest(requester.getUniqueId());
 
         if (request == null) {
-            requester.sendMessage("§c취소할 TPA 요청이 없습니다.");
+            requester.sendMessage(plugin.getMessage("tpa.error.no-request-to-cancel"));
             return true;
         }
 

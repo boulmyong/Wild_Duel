@@ -25,6 +25,7 @@ import net.md_5.bungee.api.chat.TextComponent;
 
 public class GameManager {
 
+    private final WildDuel plugin;
     private final TeamManager teamManager;
     private volatile GameState gameState = GameState.LOBBY;
     private volatile boolean isWorldRegenerating = false;
@@ -40,9 +41,10 @@ public class GameManager {
 
     private boolean autoSmeltEnabled = false;
     private boolean playerTeamSelectionEnabled = false;
-    private boolean isTeamGameMode = false;
+    private GameMode gameMode = GameMode.SOLO;
 
-    public GameManager(TeamManager teamManager) {
+    public GameManager(WildDuel plugin, TeamManager teamManager) {
+        this.plugin = plugin;
         this.teamManager = teamManager;
     }
 
@@ -53,7 +55,7 @@ public class GameManager {
     public void initializeWorlds() {
         this.lobbyWorld = Bukkit.getWorld("wildduel_world");
         if (this.lobbyWorld == null) {
-            WildDuel.getInstance().getLogger().severe("로비 월드(wildduel_world)를 찾을 수 없습니다! 플러그인이 정상적으로 동작하지 않을 수 있습니다.");
+            WildDuel.getInstance().getLogger().severe(plugin.getMessage("error.lobby-world-not-found"));
             return;
         }
         
@@ -81,7 +83,7 @@ public class GameManager {
         if (lobbyWorld == null) return;
         Location spawnPoint = lobbyWorld.getSpawnLocation().clone().add(0.5, 0, 0.5);
         io.papermc.lib.PaperLib.teleportAsync(player, spawnPoint);
-        player.setGameMode(GameMode.ADVENTURE);
+        player.setGameMode(org.bukkit.GameMode.ADVENTURE);
         player.getInventory().clear();
         player.setHealth(20.0);
         player.setFoodLevel(20);
@@ -112,18 +114,18 @@ public class GameManager {
     }
 
     public void askAdminToStart(Player admin) {
-        TextComponent message = new TextComponent(ChatColor.YELLOW + "어떤 작업을 수행하시겠습니까? ");
+        TextComponent message = new TextComponent(plugin.getMessage("gui.admin.start.title"));
 
-        TextComponent regenLink = new TextComponent(ChatColor.RED + "[월드 재생성]");
+        TextComponent regenLink = new TextComponent(plugin.getMessage("gui.admin.start.regen-button"));
         regenLink.setClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/wd regen_world_confirm"));
-        regenLink.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, new Text("§c모든 플레이어를 내보내고 맵을 초기화합니다.\n§c(서버 랙 유발)")));
+        regenLink.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, new Text(plugin.getMessage("gui.admin.start.regen-button-lore"))));
 
-        TextComponent startLink = new TextComponent(ChatColor.GREEN + "[즉시 시작]");
+        TextComponent startLink = new TextComponent(plugin.getMessage("gui.admin.start.start-button"));
         startLink.setClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/wd start_game_final"));
-        startLink.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, new Text("§a현재 준비된 월드에서 즉시 게임을 시작합니다.")));
+        startLink.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, new Text(plugin.getMessage("gui.admin.start.start-button-lore"))));
 
         message.addExtra(regenLink);
-        message.addExtra(new TextComponent(ChatColor.GRAY + " 또는 "));
+        message.addExtra(new TextComponent(plugin.getMessage("gui.admin.start.separator")));
         message.addExtra(startLink);
 
         admin.spigot().sendMessage(message);
@@ -131,31 +133,31 @@ public class GameManager {
 
     public void executeWorldRegeneration() {
         if (isWorldRegenerating) {
-            Bukkit.broadcastMessage(ChatColor.RED + "게임 월드가 이미 생성중입니다. 잠시 후 다시 시도해주세요.");
+            Bukkit.broadcastMessage(plugin.getMessage("error.world-already-generating"));
             return;
         }
         isWorldRegenerating = true;
         Bukkit.setWhitelist(true);
-        WildDuel.getInstance().getLogger().info("월드 재생성을 위해 화이트리스트를 활성화합니다.");
+        WildDuel.getInstance().getLogger().info(plugin.getMessage("info.whitelist-enabled-for-regen"));
 
         for (Player player : Bukkit.getOnlinePlayers()) {
-            player.kickPlayer(ChatColor.GREEN + "서버 관리자가 게임 월드를 재생성하고 있습니다. 잠시 후 다시 접속해주세요.");
+            player.kickPlayer(plugin.getMessage("kick.reason.world-regen"));
         }
 
         new BukkitRunnable() {
             @Override
             public void run() {
-                WildDuel.getInstance().getLogger().info("플레이어 처리 후 월드 재생성을 시작합니다...");
+                WildDuel.getInstance().getLogger().info(plugin.getMessage("info.starting-world-regen-after-kick"));
                 recreateGameWorldAsync().whenComplete((newWorld, ex) -> {
                     isWorldRegenerating = false;
                     Bukkit.setWhitelist(false);
-                    WildDuel.getInstance().getLogger().info("월드 재생성이 완료되어 화이트리스트를 비활성화합니다.");
+                    WildDuel.getInstance().getLogger().info(plugin.getMessage("info.whitelist-disabled-after-regen"));
                     if (ex != null) {
-                        WildDuel.getInstance().getLogger().log(Level.SEVERE, "게임 월드 생성에 실패했습니다. 플러그인을 확인해주세요.", ex);
+                        WildDuel.getInstance().getLogger().log(Level.SEVERE, plugin.getMessage("error.world-gen-failed"), ex);
                         GameManager.this.gameWorld = null;
                     } else {
                         GameManager.this.gameWorld = newWorld;
-                        WildDuel.getInstance().getLogger().info("다음 게임을 위한 월드 준비가 완료되었습니다.");
+                        WildDuel.getInstance().getLogger().info(plugin.getMessage("info.world-gen-complete"));
                     }
                 });
             }
@@ -164,30 +166,29 @@ public class GameManager {
 
     public void executeGameStart() {
         if (getGameState() != GameState.LOBBY) {
-            Bukkit.broadcastMessage(ChatColor.RED + "게임이 로비 상태일 때만 시작할 수 있습니다.");
+            Bukkit.broadcastMessage(plugin.getMessage("error.must-be-lobby"));
             return;
         }
         if (isWorldRegenerating) {
-            Bukkit.broadcastMessage(ChatColor.RED + "게임 월드가 생성중입니다. 잠시 후 다시 시도해주세요.");
+            Bukkit.broadcastMessage(plugin.getMessage("error.world-already-generating"));
             return;
         }
         if (gameWorld == null) {
-            Bukkit.broadcastMessage(ChatColor.RED + "게임 월드가 아직 준비되지 않았습니다. 먼저 [월드 재생성]을 실행해주세요.");
+            Bukkit.broadcastMessage(plugin.getMessage("error.world-not-ready"));
             return;
         }
 
         List<Player> participants = new ArrayList<>(lobbyWorld.getPlayers());
         if (participants.size() < 2) {
-            Bukkit.broadcastMessage(ChatColor.RED + "게임 시작을 위한 최소 인원은 2명입니다.");
+            Bukkit.broadcastMessage(plugin.getMessage("error.not-enough-players"));
             return;
         }
 
         // Determine game mode and validate teams
-        this.isTeamGameMode = participants.stream().anyMatch(p -> teamManager.getPlayerTeam(p) != null);
-        if (this.isTeamGameMode) {
+        if (this.gameMode == GameMode.TEAM) {
             for (Player player : participants) {
                 if (teamManager.getPlayerTeam(player) == null) {
-                    Bukkit.broadcastMessage(ChatColor.RED + "팀전에 참여하지 않은 플레이어가 있습니다. 모든 플레이어를 팀에 배정해주세요.");
+                    Bukkit.broadcastMessage(plugin.getMessage("error.player-not-in-team"));
                     return;
                 }
             }
@@ -213,7 +214,7 @@ public class GameManager {
                     return;
                 }
                 for (Player player : lobbyWorld.getPlayers()) {
-                    player.sendTitle(ChatColor.GREEN + "게임이 곧 시작됩니다...", ChatColor.YELLOW + String.valueOf(countdown), 0, 25, 5);
+                    player.sendTitle(plugin.getMessage("title.game-starting"), ChatColor.YELLOW + String.valueOf(countdown), 0, 25, 5);
                 }
                 countdown--;
             }
@@ -237,7 +238,7 @@ public class GameManager {
 
         for (Player player : playersToTeleport) {
             teleportFutures.add(teleportToCenter(player, gameWorld));
-            player.setGameMode(GameMode.SURVIVAL);
+            player.setGameMode(org.bukkit.GameMode.SURVIVAL);
             player.setExp(0F);
             player.setLevel(0);
             player.getInventory().clear();
@@ -257,11 +258,11 @@ public class GameManager {
         return CompletableFuture.supplyAsync(() -> {
             World world = Bukkit.getWorld("wildduel_game");
             if (world != null) {
-                WildDuel.getInstance().getLogger().info("기존 게임 월드를 언로드합니다: " + world.getName());
+                WildDuel.getInstance().getLogger().info(plugin.getMessage("info.unloading-world", "%world%", world.getName()));
                 if (!Bukkit.unloadWorld(world, false)) {
-                    throw new RuntimeException("게임 월드 언로드에 실패했습니다: " + world.getName());
+                    throw new RuntimeException(plugin.getMessage("error.world-unload-failed", "%world%", world.getName()));
                 }
-                WildDuel.getInstance().getLogger().info("게임 월드 언로드 완료.");
+                WildDuel.getInstance().getLogger().info(plugin.getMessage("info.world-unload-complete"));
                 return world.getWorldFolder();
             }
             return new File(Bukkit.getWorldContainer(), "wildduel_game");
@@ -269,23 +270,23 @@ public class GameManager {
         // Phase 2: Delete world folder (async)
         .thenCompose(worldFolder -> CompletableFuture.runAsync(() -> {
             if (worldFolder.exists()) {
-                WildDuel.getInstance().getLogger().info("기존 월드 폴더를 삭제합니다: " + worldFolder.getName());
+                WildDuel.getInstance().getLogger().info(plugin.getMessage("info.deleting-world-folder", "%folder%", worldFolder.getName()));
                 if (!deleteWorldRecursively(worldFolder)) {
-                    throw new RuntimeException("월드 폴더 삭제에 실패했습니다: " + worldFolder.getName());
+                    throw new RuntimeException(plugin.getMessage("error.world-folder-delete-failed", "%folder%", worldFolder.getName()));
                 }
-                WildDuel.getInstance().getLogger().info("월드 폴더 삭제 완료.");
+                WildDuel.getInstance().getLogger().info(plugin.getMessage("info.world-folder-delete-complete"));
             }
         }, runnable -> WildDuel.getInstance().getServer().getAsyncScheduler().runNow(WildDuel.getInstance(), scheduledTask -> runnable.run())))
         // Phase 3: Create new world (on main thread)
         .thenCompose(v -> CompletableFuture.supplyAsync(() -> {
-            WildDuel.getInstance().getLogger().info("새로운 게임 월드를 생성합니다...");
+            WildDuel.getInstance().getLogger().info(plugin.getMessage("info.creating-new-world"));
             WorldCreator wc = new WorldCreator("wildduel_game");
             wc.seed(new Random().nextLong());
             World newWorld = wc.createWorld();
             if (newWorld == null) {
-                throw new RuntimeException("새로운 게임 월드 생성에 실패했습니다.");
+                throw new RuntimeException(plugin.getMessage("error.new-world-create-failed"));
             }
-            WildDuel.getInstance().getLogger().info("새로운 게임 월드 생성 완료.");
+            WildDuel.getInstance().getLogger().info(plugin.getMessage("info.new-world-create-complete"));
             return newWorld;
         }, runnable -> Bukkit.getScheduler().runTask(WildDuel.getInstance(), runnable)));
     }
@@ -318,7 +319,7 @@ public class GameManager {
     }
 
     private void startTimer() {
-        timerBar = Bukkit.createBossBar("파밍 시간", BarColor.BLUE, BarStyle.SOLID);
+        timerBar = Bukkit.createBossBar(plugin.getMessage("bossbar.farming-time"), BarColor.BLUE, BarStyle.SOLID);
         timerBar.setVisible(true);
         if (gameWorld == null) return;
         for (Player player : gameWorld.getPlayers()) {
@@ -334,11 +335,11 @@ public class GameManager {
                     return;
                 }
                 if (prepTimeSeconds == 300 || prepTimeSeconds == 60) {
-                    Bukkit.broadcastMessage("§e[안내] §f파밍 시간이 " + (prepTimeSeconds / 60) + "분 남았습니다!");
+                    Bukkit.broadcastMessage(plugin.getMessage("info.farming-time-remaining", "%minutes%", String.valueOf(prepTimeSeconds / 60)));
                 }
                 prepTimeSeconds--;
                 timerBar.setProgress((double) prepTimeSeconds / initialPrepTimeSeconds);
-                timerBar.setTitle("남은 파밍 시간: " + formatTime(prepTimeSeconds));
+                timerBar.setTitle(plugin.getMessage("bossbar.farming-time-remaining", "%time%", formatTime(prepTimeSeconds)));
             }
         };
         gameTask.runTaskTimer(WildDuel.getInstance(), 0, 20);
@@ -351,7 +352,7 @@ public class GameManager {
         gameWorld.setPVP(true);
 
         for (Player player : gameWorld.getPlayers()) {
-            player.sendMessage("§c전투가 시작되었습니다!");
+            player.sendMessage(plugin.getMessage("info.battle-started"));
         }
 
         stopSaturationEffect();
@@ -371,10 +372,10 @@ public class GameManager {
         if (getGameState() != GameState.BATTLE || gameWorld == null) return;
 
         List<Player> alivePlayers = gameWorld.getPlayers().stream()
-                .filter(p -> p.getGameMode() == GameMode.SURVIVAL && p.isOnline())
+                .filter(p -> p.getGameMode() == org.bukkit.GameMode.SURVIVAL && p.isOnline())
                 .toList();
 
-        if (isTeamGameMode) {
+        if (gameMode == GameMode.TEAM) {
             // Team Game Logic
             List<TeamManager.TeamData> activeTeams = new ArrayList<>();
             for (TeamManager.TeamData teamData : teamManager.getTeams()) {
@@ -398,8 +399,8 @@ public class GameManager {
         if (getGameState() == GameState.ENDED) return;
         setGameState(GameState.ENDED);
 
-        String winnerMessage = "§a" + winner.getName() + "님 승리!";
-        String broadcastWinner = "§f승리: §a" + winner.getName() + "님!";
+        String winnerMessage = plugin.getMessage("win.player", "%player%", winner.getName());
+        String broadcastWinner = plugin.getMessage("win.broadcast.player", "%player%", winner.getName());
 
         broadcastEndMessage(winnerMessage, broadcastWinner);
     }
@@ -414,29 +415,29 @@ public class GameManager {
         if (winner != null && !winner.getPlayers().isEmpty()) {
             if (winner.getPlayers().size() == 1) {
                 Player soloWinner = new ArrayList<>(winner.getPlayers()).get(0);
-                winnerMessage = "§a" + soloWinner.getName() + "님 승리!";
-                broadcastWinner = "§f승리: §a" + soloWinner.getName() + "님!";
+                winnerMessage = plugin.getMessage("win.player", "%player%", soloWinner.getName());
+                broadcastWinner = plugin.getMessage("win.broadcast.player", "%player%", soloWinner.getName());
             } else {
-                winnerMessage = winner.getColor() + winner.getName() + " 팀 승리!";
-                broadcastWinner = "§f승리: " + winner.getColor() + winner.getName() + " 팀!";
+                winnerMessage = plugin.getMessage("win.team", "%color%", winner.getColor().toString(), "%team%", winner.getName());
+                broadcastWinner = plugin.getMessage("win.broadcast.team", "%color%", winner.getColor().toString(), "%team%", winner.getName());
             }
         } else {
-            winnerMessage = "게임이 무승부로 종료되었습니다!";
-            broadcastWinner = "§f승리: 무승부!";
+            winnerMessage = plugin.getMessage("win.draw");
+            broadcastWinner = plugin.getMessage("win.broadcast.draw");
         }
 
         broadcastEndMessage(winnerMessage, broadcastWinner);
     }
 
     private void broadcastEndMessage(String winnerMessage, String broadcastWinner) {
-        Bukkit.broadcastMessage("§a========================================");
-        Bukkit.broadcastMessage("§e           게임 종료");
-        Bukkit.broadcastMessage(" ");
+        Bukkit.broadcastMessage(plugin.getMessage("separator.heavy"));
+        Bukkit.broadcastMessage(plugin.getMessage("title.game-ended"));
+        Bukkit.broadcastMessage(plugin.getMessage("separator.blank"));
         Bukkit.broadcastMessage(broadcastWinner);
-        Bukkit.broadcastMessage("§a========================================");
+        Bukkit.broadcastMessage(plugin.getMessage("separator.heavy"));
 
         for (Player player : Bukkit.getOnlinePlayers()) {
-            player.sendTitle(winnerMessage, "10초 후 로비로 이동합니다.", 10, 80, 20);
+            player.sendTitle(winnerMessage, plugin.getMessage("title.subtitle.teleport-to-lobby"), 10, 80, 20);
         }
 
         if (gameTask != null) gameTask.cancel();
@@ -463,7 +464,7 @@ public class GameManager {
         initialPrepTimeSeconds = 900;
 
         if (this.gameWorld != null) {
-            WildDuel.getInstance().getLogger().info("게임 월드 정리 중...");
+            WildDuel.getInstance().getLogger().info(plugin.getMessage("info.cleaning-up-world"));
             World worldToClean = this.gameWorld;
             this.gameWorld = null; 
             CompletableFuture.runAsync(() -> {
@@ -474,7 +475,7 @@ public class GameManager {
                 });
             }).thenRunAsync(() -> {
                 deleteWorldRecursively(worldToClean.getWorldFolder());
-                WildDuel.getInstance().getLogger().info("게임 월드 정리 완료.");
+                WildDuel.getInstance().getLogger().info(plugin.getMessage("info.world-cleanup-complete"));
             });
         }
 
@@ -489,6 +490,8 @@ public class GameManager {
     public void setAutoSmelt(boolean autoSmeltEnabled) { this.autoSmeltEnabled = autoSmeltEnabled; }
     public boolean isPlayerTeamSelectionEnabled() { return playerTeamSelectionEnabled; }
     public void setPlayerTeamSelectionEnabled(boolean playerTeamSelectionEnabled) { this.playerTeamSelectionEnabled = playerTeamSelectionEnabled; }
+    public GameMode getGameMode() { return gameMode; }
+    public void setGameMode(GameMode gameMode) { this.gameMode = gameMode; }
     public int getInitialPrepTimeSeconds() { return initialPrepTimeSeconds; }
     public void setPrepTime(int seconds) { this.initialPrepTimeSeconds = seconds; }
 
@@ -521,7 +524,7 @@ public class GameManager {
                 WorldBorder border = gameWorld.getWorldBorder();
                 Location center = border.getCenter();
                 for (Player player : gameWorld.getPlayers()) {
-                    player.spigot().sendMessage(ChatMessageType.ACTION_BAR, new TextComponent(ChatColor.YELLOW + "중앙 좌표: " + ChatColor.WHITE + String.format("X: %.0f, Z: %.0f", center.getX(), center.getZ())));
+                    player.spigot().sendMessage(ChatMessageType.ACTION_BAR, new TextComponent(plugin.getMessage("actionbar.center-coords", "%x%", String.format("%.0f", center.getX()), "%z%", String.format("%.0f", center.getZ()))));
                 }
             }
         };

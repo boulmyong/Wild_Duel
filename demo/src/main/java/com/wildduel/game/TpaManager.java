@@ -32,18 +32,18 @@ public class TpaManager {
     public void requestTpa(Player requester, Player target) {
         String requesterTeam = teamManager.getPlayerTeam(requester);
         if (requesterTeam == null || !requesterTeam.equals(teamManager.getPlayerTeam(target))) {
-            requester.sendMessage("§c같은 팀원에게만 TPA 요청을 보낼 수 있습니다.");
+            requester.sendMessage(WildDuel.getInstance().getMessage("tpa.error.not-same-team"));
             return;
         }
 
         if (cooldowns.containsKey(requester.getUniqueId()) && System.currentTimeMillis() - cooldowns.get(requester.getUniqueId()) < cooldownSeconds * 1000) {
             long remaining = (cooldowns.get(requester.getUniqueId()) + cooldownSeconds * 1000 - System.currentTimeMillis()) / 1000;
-            requester.sendMessage("§cTPA 쿨타임이 " + remaining + "초 남았습니다.");
+            requester.sendMessage(WildDuel.getInstance().getMessage("tpa.error.cooldown", "%seconds%", String.valueOf(remaining)));
             return;
         }
 
         if (pendingRequests.containsKey(requester.getUniqueId())) {
-            requester.sendMessage("§c이미 보낸 TPA 요청이 있습니다. 취소하려면 /tpacancel을 입력하세요.");
+            requester.sendMessage(WildDuel.getInstance().getMessage("tpa.error.already-sent"));
             return;
         }
 
@@ -51,12 +51,12 @@ public class TpaManager {
         pendingRequests.put(requester.getUniqueId(), request);
         cooldowns.put(requester.getUniqueId(), System.currentTimeMillis());
 
-        requester.sendMessage("§a" + target.getName() + "님에게 TPA 요청을 보냈습니다.");
+        requester.sendMessage(WildDuel.getInstance().getMessage("tpa.success.request-sent", "%player%", target.getName()));
 
-        TextComponent message = new TextComponent("§e[TPA] §f" + requester.getName() + "님이 텔레포트 요청을 보냈습니다. ");
-        TextComponent accept = new TextComponent("§a[수락]");
+        TextComponent message = new TextComponent(WildDuel.getInstance().getMessage("tpa.info.request-received", "%player%", requester.getName()));
+        TextComponent accept = new TextComponent(WildDuel.getInstance().getMessage("tpa.info.accept"));
         accept.setClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/tparesponse accept " + requester.getName()));
-        TextComponent deny = new TextComponent(" §c[거절]");
+        TextComponent deny = new TextComponent(WildDuel.getInstance().getMessage("tpa.info.deny"));
         deny.setClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/tparesponse deny " + requester.getName()));
 
         message.addExtra(accept);
@@ -68,8 +68,8 @@ public class TpaManager {
             @Override
             public void run() {
                 if (pendingRequests.remove(requester.getUniqueId(), request)) {
-                    requester.sendMessage("§cTPA 요청이 시간 초과로 취소되었습니다.");
-                    target.sendMessage("§c" + requester.getName() + "님의 TPA 요청이 시간 초과로 취소되었습니다.");
+                    requester.sendMessage(WildDuel.getInstance().getMessage("tpa.error.timeout-requester"));
+                    target.sendMessage(WildDuel.getInstance().getMessage("tpa.error.timeout-target", "%player%", requester.getName()));
                 }
             }
         }.runTaskLater(WildDuel.getInstance(), tpaTimeout * 20);
@@ -79,13 +79,13 @@ public class TpaManager {
     public void handleResponse(Player target, String requesterName, boolean accepted) {
         Player requester = Bukkit.getPlayer(requesterName);
         if (requester == null) {
-            target.sendMessage("§c요청자가 오프라인 상태입니다.");
+            target.sendMessage(WildDuel.getInstance().getMessage("tpa.error.requester-offline"));
             return;
         }
 
         TpaRequest request = pendingRequests.get(requester.getUniqueId());
         if (request == null || !request.getTarget().equals(target.getUniqueId())) {
-            target.sendMessage("§c해당 TPA 요청을 찾을 수 없습니다.");
+            target.sendMessage(WildDuel.getInstance().getMessage("tpa.error.request-not-found"));
             return;
         }
 
@@ -93,12 +93,12 @@ public class TpaManager {
         pendingRequests.remove(requester.getUniqueId());
 
         if (accepted) {
-            target.sendMessage("§aTPA 요청을 수락했습니다. 3초 후 " + requester.getName() + "님이 텔레포트됩니다.");
-            requester.sendMessage("§a" + target.getName() + "님이 TPA 요청을 수락했습니다. 3초 후 텔레포트됩니다. 움직이지 마세요.");
+            target.sendMessage(WildDuel.getInstance().getMessage("tpa.success.accepted-target", "%player%", requester.getName()));
+            requester.sendMessage(WildDuel.getInstance().getMessage("tpa.success.accepted-requester", "%player%", target.getName()));
             startTeleportCountdown(requester, target);
         } else {
-            target.sendMessage("§cTPA 요청을 거절했습니다.");
-            requester.sendMessage("§c" + target.getName() + "님이 TPA 요청을 거절했습니다.");
+            target.sendMessage(WildDuel.getInstance().getMessage("tpa.success.denied-target"));
+            requester.sendMessage(WildDuel.getInstance().getMessage("tpa.success.denied-requester", "%player%", target.getName()));
         }
     }
 
@@ -107,10 +107,10 @@ public class TpaManager {
         if (request != null) {
             request.cancelTimeoutTask();
             if (manual) {
-                requester.sendMessage("§aTPA 요청을 취소했습니다.");
+                requester.sendMessage(WildDuel.getInstance().getMessage("tpa.success.cancelled-requester"));
             }
             if (target != null) {
-                target.sendMessage("§c" + requester.getName() + "님의 TPA 요청이 취소되었습니다.");
+                target.sendMessage(WildDuel.getInstance().getMessage("tpa.info.cancelled-target", "%player%", requester.getName()));
             }
         }
     }
@@ -129,7 +129,7 @@ public class TpaManager {
                 }
 
                 if (requester.getLocation().distance(initialLocation) > 1) {
-                    requester.sendMessage("§c움직여서 텔레포트가 취소되었습니다.");
+                    requester.sendMessage(WildDuel.getInstance().getMessage("tpa.error.moved"));
                     this.cancel();
                     return;
                 }
@@ -141,7 +141,7 @@ public class TpaManager {
                     return;
                 }
 
-                requester.sendMessage("§e" + countdown + "초 후 텔레포트...");
+                requester.sendMessage(WildDuel.getInstance().getMessage("tpa.info.teleporting-in", "%seconds%", String.valueOf(countdown)));
                 countdown--;
             }
         }.runTaskTimer(WildDuel.getInstance(), 0, 20);
@@ -197,7 +197,7 @@ public class TpaManager {
                 if (requester != null) {
                     // Found the request, cancel it and notify the requester
                     cancelTpa(requester, player, false);
-                    requester.sendMessage("§c" + player.getName() + "님이 오프라인 상태가 되어 TPA 요청이 취소되었습니다.");
+                    requester.sendMessage(WildDuel.getInstance().getMessage("tpa.error.target-offline-on-quit", "%player%", player.getName()));
                     break; // Since a player can only be the target of one request, we can stop searching
                 }
             }

@@ -9,6 +9,7 @@ import com.wildduel.listeners.AdminGUIListener;
 import com.wildduel.listeners.PlayerEventListener;
 import com.wildduel.listeners.TeamAdminGUIListener;
 import com.wildduel.listeners.TeamGUIListener;
+import com.wildduel.gui.TeamGUI;
 import com.wildduel.util.EmptyWorldGenerator;
 import org.bukkit.Bukkit;
 import org.bukkit.World;
@@ -47,12 +48,14 @@ public class WildDuel extends JavaPlugin {
     private List<ItemStack> defaultStartItems = new ArrayList<>();
     private PlayerInventorySnapshot defaultStartInventory;
     private FileConfiguration messagesConfig;
+    private String language;
 
     @Override
     public void onEnable() {
         instance = this;
 
         saveDefaultConfig();
+        this.language = getConfig().getString("language", "ko").toLowerCase();
         loadMessages();
         loadDefaultStartItems();
         loadDefaultStartInventory();
@@ -61,9 +64,10 @@ public class WildDuel extends JavaPlugin {
         createLobbyWorld();
 
         teamManager = new TeamManager();
-        gameManager = new GameManager(teamManager);
+        gameManager = new GameManager(this, teamManager);
         teamAdminManager = new TeamAdminManager();
         tpaManager = new TpaManager(teamManager);
+        TeamGUI teamGUI = new TeamGUI(this, teamManager, gameManager);
 
         // Initialize managers with world context
         gameManager.initializeWorlds();
@@ -74,15 +78,15 @@ public class WildDuel extends JavaPlugin {
         getCommand("wd").setExecutor(new WildDuelCommand(this, gameManager, teamManager, teamAdminManager, tpaManager));
         getCommand("wd").setTabCompleter(new WildDuelTabCompleter());
         getCommand("tpa").setExecutor(new TpaCommand(tpaManager));
-        getCommand("tpacancel").setExecutor(new TpaCancelCommand(tpaManager));
+        getCommand("tpacancel").setExecutor(new TpaCancelCommand(this, tpaManager));
         getCommand("tparesponse").setExecutor(new TpaResponseCommand(tpaManager));
-        getCommand("팀선택").setExecutor(new TeamSelectCommand(gameManager, teamManager));
+        getCommand("팀선택").setExecutor(new TeamSelectCommand(this, teamGUI, gameManager));
 
         getServer().getPluginManager().registerEvents(new PlayerEventListener(gameManager, teamManager), this);
-        getServer().getPluginManager().registerEvents(new TeamAdminGUIListener(teamAdminManager, teamManager), this);
+        getServer().getPluginManager().registerEvents(new TeamAdminGUIListener(this, teamAdminManager, teamManager), this);
         
         getServer().getPluginManager().registerEvents(new AdminGUIListener(this, gameManager, teamManager, tpaManager, teamAdminManager), this);
-        getServer().getPluginManager().registerEvents(new TeamGUIListener(teamManager), this);
+        getServer().getPluginManager().registerEvents(new TeamGUIListener(this, teamManager, gameManager, teamGUI), this);
         getServer().getPluginManager().registerEvents(new StartItemGUIListener(this), this);
         getLogger().info("WildDuel plugin enabled!");
     }
@@ -214,7 +218,9 @@ public class WildDuel extends JavaPlugin {
     }
 
     public String getMessage(String key) {
-        return ChatColor.translateAlternateColorCodes('&', messagesConfig.getString(key, "&cMissing message: " + key));
+        String path = language + "." + key;
+        String message = messagesConfig.getString(path, "&cMissing message: " + path);
+        return ChatColor.translateAlternateColorCodes('&', message);
     }
 
     public String getMessage(String key, String... replacements) {

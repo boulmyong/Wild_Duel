@@ -22,7 +22,7 @@ public class StartItemGUIListener implements Listener {
 
     @EventHandler
     public void onInventoryClick(InventoryClickEvent event) {
-        if (event.getView().getTitle().equals(ChatColor.BLUE + "시작 아이템 설정")) {
+        if (event.getView().getTitle().equals(plugin.getMessage("gui.startitem.title"))) {
             Player player = (Player) event.getWhoClicked();
             Inventory clickedInventory = event.getClickedInventory();
             ItemStack clickedItem = event.getCurrentItem();
@@ -50,7 +50,7 @@ public class StartItemGUIListener implements Listener {
 
                         PlayerInventorySnapshot newSnapshot = new PlayerInventorySnapshot(contents, armor, offHand);
                         plugin.setDefaultStartInventory(newSnapshot);
-                        player.sendMessage(ChatColor.GREEN + "시작 아이템 설정이 저장되었습니다!");
+                        player.sendMessage(plugin.getMessage("gui.startitem.success.saved"));
                         player.closeInventory();
                     }
                 }

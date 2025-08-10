@@ -22,18 +22,20 @@ import java.util.List;
 
 public class TeamAdminGUI {
 
+    private final WildDuel plugin;
     private final TeamAdminManager adminManager;
     private final TeamManager teamManager;
     public static final NamespacedKey PLAYER_UUID_KEY = new NamespacedKey(WildDuel.getInstance(), "player_uuid");
 
-    public TeamAdminGUI(TeamAdminManager adminManager, TeamManager teamManager) {
+    public TeamAdminGUI(WildDuel plugin, TeamAdminManager adminManager, TeamManager teamManager) {
+        this.plugin = plugin;
         this.adminManager = adminManager;
         this.teamManager = teamManager;
     }
 
     public void open(Player admin) {
         TeamAdminManager.PlayerSelection selection = adminManager.getPlayerSelection(admin);
-        Inventory gui = Bukkit.createInventory(null, 54, "§8팀 수동 배정");
+        Inventory gui = Bukkit.createInventory(null, 54, plugin.getMessage("gui.teamadmin.title"));
 
         List<Player> players = new ArrayList<>(Bukkit.getOnlinePlayers());
         int page = selection.getCurrentPage();
@@ -52,11 +54,11 @@ public class TeamAdminGUI {
 
                     // --- Visual Feedback for Selection ---
                     if (player.getUniqueId().equals(selection.getSelectedPlayer())) {
-                        meta.setDisplayName("§b§l" + player.getName() + " (선택됨)");
+                        meta.setDisplayName(plugin.getMessage("gui.teamadmin.player.selected", "%player%", player.getName()));
                         meta.addEnchant(Enchantment.PROTECTION, 1, true);
                         meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
                     } else {
-                        meta.setDisplayName("§f" + player.getName());
+                        meta.setDisplayName(plugin.getMessage("gui.teamadmin.player.normal", "%player%", player.getName()));
                     }
                     head.setItemMeta(meta);
                 }
@@ -66,11 +68,11 @@ public class TeamAdminGUI {
 
         // Page Buttons
         if (page > 0) {
-            gui.setItem(45, createButton(Material.ARROW, "§e◀ 이전 페이지"));
+            gui.setItem(45, createButton(Material.ARROW, plugin.getMessage("gui.teamadmin.button.previous-page")));
         }
         // 다음 페이지에 표시할 플레이어가 남아있는 경우에만 버튼을 표시합니다.
         if (startIndex + 27 < players.size()) {
-            gui.setItem(53, createButton(Material.ARROW, "§e▶ 다음 페이지"));
+            gui.setItem(53, createButton(Material.ARROW, plugin.getMessage("gui.teamadmin.button.next-page")));
         }
 
         // Team Selection & Apply Buttons
@@ -78,7 +80,7 @@ public class TeamAdminGUI {
         gui.setItem(47, createTeamButton(TeamType.BLUE, selection.getSelectedTeam()));
         gui.setItem(48, createTeamButton(TeamType.NONE, selection.getSelectedTeam()));
         gui.setItem(50, createTeamButton(TeamType.SPECTATOR, selection.getSelectedTeam()));
-        gui.setItem(49, createButton(Material.ANVIL, "§a✔ 설정 적용"));
+        gui.setItem(49, createButton(Material.ANVIL, plugin.getMessage("gui.teamadmin.button.apply")));
 
         admin.openInventory(gui);
     }
@@ -97,7 +99,7 @@ public class TeamAdminGUI {
         ItemStack item = new ItemStack(getMaterialForTeam(teamType));
         ItemMeta meta = item.getItemMeta();
         if (meta != null) {
-            meta.setDisplayName(teamType.getColor() + teamType.getName() + " 팀");
+            meta.setDisplayName(plugin.getMessage("gui.teamadmin.team-button", "%color%", teamType.getColor().toString(), "%team%", teamType.getName()));
             if (teamType == selectedTeam) {
                 meta.addEnchant(Enchantment.PROTECTION, 1, true);
                 meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);

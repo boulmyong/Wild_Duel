@@ -1,4 +1,6 @@
+C:\Users\user0\Desktop\Wild_Duel\demo\src\main\java\com\wildduel\listeners\GameMechanicsListener.java
 C:\Users\user0\Desktop\Wild_Duel\demo\src\main\java\com\wildduel\listeners\TeamGUIListener.java
+C:\Users\user0\Desktop\Wild_Duel\demo\src\main\java\com\wildduel\listeners\GameLifecycleListener.java
 C:\Users\user0\Desktop\Wild_Duel\demo\src\main\java\com\wildduel\WildDuel.java
 C:\Users\user0\Desktop\Wild_Duel\demo\src\main\java\com\wildduel\gui\StartItemGUI.java
 C:\Users\user0\Desktop\Wild_Duel\demo\src\main\java\com\wildduel\game\TpaManager.java
@@ -10,12 +12,15 @@ C:\Users\user0\Desktop\Wild_Duel\demo\src\main\java\com\wildduel\gui\AdminGUI.ja
 C:\Users\user0\Desktop\Wild_Duel\demo\src\main\java\com\wildduel\commands\WildDuelTabCompleter.java
 C:\Users\user0\Desktop\Wild_Duel\demo\src\main\java\com\wildduel\commands\TpaCommand.java
 C:\Users\user0\Desktop\Wild_Duel\demo\src\main\java\com\wildduel\commands\TeamSelectCommand.java
+C:\Users\user0\Desktop\Wild_Duel\demo\src\main\java\com\wildduel\game\WorldManager.java
 C:\Users\user0\Desktop\Wild_Duel\demo\src\main\java\com\wildduel\game\GameManager.java
 C:\Users\user0\Desktop\Wild_Duel\demo\src\main\java\com\wildduel\commands\TpaRefreshCommand.java
 C:\Users\user0\Desktop\Wild_Duel\demo\src\main\java\com\wildduel\game\TeamType.java
 C:\Users\user0\Desktop\Wild_Duel\demo\src\main\java\com\wildduel\listeners\TeamAdminGUIListener.java
 C:\Users\user0\Desktop\Wild_Duel\demo\src\main\java\com\wildduel\commands\TpaResponseCommand.java
 C:\Users\user0\Desktop\Wild_Duel\demo\src\main\java\com\wildduel\gui\TeamAdminGUI.java
+C:\Users\user0\Desktop\Wild_Duel\demo\src\main\java\com\wildduel\listeners\PlayerConnectionListener.java
+C:\Users\user0\Desktop\Wild_Duel\demo\src\main\java\com\wildduel\game\GameMode.java
 C:\Users\user0\Desktop\Wild_Duel\demo\src\main\java\com\wildduel\game\TeamManager.java
 C:\Users\user0\Desktop\Wild_Duel\demo\src\main\java\com\wildduel\commands\WildDuelCommand.java
 C:\Users\user0\Desktop\Wild_Duel\demo\src\main\java\com\wildduel\game\TpaRequest.java

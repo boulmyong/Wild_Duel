@@ -71,6 +71,7 @@ public class WildDuelCommand implements CommandExecutor {
             case "admin":
             case "autosmelt":
             case "setinventory":
+            case "setmode":
             case "st": // for addTime
                 handleAdminCommands(sender, args);
                 break;
@@ -103,7 +104,7 @@ public class WildDuelCommand implements CommandExecutor {
                     sender.sendMessage(plugin.getMessage("error.player-only"));
                     return;
                 }
-                new TeamAdminGUI(teamAdminManager, teamManager).open(player);
+                new TeamAdminGUI(plugin, teamAdminManager, teamManager).open(player);
                 break;
             case "randomteam":
                 if (Bukkit.getOnlinePlayers().isEmpty()) {
@@ -156,6 +157,21 @@ public class WildDuelCommand implements CommandExecutor {
                 }
                 new StartItemGUI(plugin.getDefaultStartInventory()).open(player);
                 player.sendMessage(plugin.getMessage("command.setinventory.gui-opened"));
+                break;
+            case "setmode":
+                if (args.length > 1) {
+                    if (args[1].equalsIgnoreCase("team")) {
+                        gameManager.setGameMode(com.wildduel.game.GameMode.TEAM);
+                        sender.sendMessage(plugin.getMessage("command.setmode.success", "%mode%", "팀전"));
+                    } else if (args[1].equalsIgnoreCase("solo")) {
+                        gameManager.setGameMode(com.wildduel.game.GameMode.SOLO);
+                        sender.sendMessage(plugin.getMessage("command.setmode.success", "%mode%", "개인전"));
+                    } else {
+                        sender.sendMessage(plugin.getMessage("command.setmode.usage"));
+                    }
+                } else {
+                    sender.sendMessage(plugin.getMessage("command.setmode.usage"));
+                }
                 break;
         }
     }
@@ -260,6 +276,7 @@ public class WildDuelCommand implements CommandExecutor {
             sender.sendMessage(plugin.getMessage("help.admin.random-team"));
             sender.sendMessage(plugin.getMessage("help.admin.add-time"));
             sender.sendMessage(plugin.getMessage("help.admin.autosmelt"));
+            sender.sendMessage(plugin.getMessage("help.admin.setmode"));
             sender.sendMessage(plugin.getMessage("help.admin.reset"));
             sender.sendMessage(plugin.getMessage("help.admin.tpa-refresh"));
             sender.sendMessage(plugin.getMessage("help.admin.tpa-status"));
