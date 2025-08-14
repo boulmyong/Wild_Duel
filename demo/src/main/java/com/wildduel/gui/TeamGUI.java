@@ -2,7 +2,7 @@ package com.wildduel.gui;
 
 import com.wildduel.WildDuel;
 import com.wildduel.game.GameManager;
-import com.wildduel.game.GameMode;
+
 import com.wildduel.game.TeamManager;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
@@ -15,7 +15,7 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataType;
 
 import java.util.ArrayList;
-import java.util.Arrays;
+
 import java.util.List;
 
 public class TeamGUI {
@@ -24,7 +24,7 @@ public class TeamGUI {
     private final TeamManager teamManager;
     private final GameManager gameManager;
     public static final NamespacedKey TEAM_NAME_KEY = new NamespacedKey(WildDuel.getInstance(), "team_name");
-    public static final NamespacedKey GAME_MODE_KEY = new NamespacedKey(WildDuel.getInstance(), "game_mode");
+    
 
     public TeamGUI(WildDuel plugin, TeamManager teamManager, GameManager gameManager) {
         this.plugin = plugin;
@@ -33,7 +33,7 @@ public class TeamGUI {
     }
 
     public void open(Player player) {
-        Inventory gui = Bukkit.createInventory(null, 18, plugin.getMessage("gui.team.title"));
+        Inventory gui = Bukkit.createInventory(null, 9, plugin.getMessage("gui.team.title"));
 
         // Team Selection Items
         for (TeamManager.TeamData team : teamManager.getTeams()) {
@@ -61,22 +61,7 @@ public class TeamGUI {
             gui.addItem(teamItem);
         }
 
-        // Game Mode Selection Items
-        ItemStack teamModeItem = new ItemStack(Material.RED_BANNER);
-        ItemMeta teamModeMeta = teamModeItem.getItemMeta();
-        teamModeMeta.setDisplayName(plugin.getMessage("gui.team.button.team-mode"));
-        teamModeMeta.setLore(Arrays.asList(plugin.getMessage("gui.team.lore.click-to-set-team-mode"), plugin.getMessage("gui.team.lore.current-mode", "%mode%", (gameManager.getGameMode() == GameMode.TEAM ? "&a팀전" : "&c개인전"))));
-        teamModeMeta.getPersistentDataContainer().set(GAME_MODE_KEY, PersistentDataType.STRING, GameMode.TEAM.name());
-        teamModeItem.setItemMeta(teamModeMeta);
-        gui.setItem(6, teamModeItem);
-
-        ItemStack soloModeItem = new ItemStack(Material.BLUE_BANNER);
-        ItemMeta soloModeMeta = soloModeItem.getItemMeta();
-        soloModeMeta.setDisplayName(plugin.getMessage("gui.team.button.solo-mode"));
-        soloModeMeta.setLore(Arrays.asList(plugin.getMessage("gui.team.lore.click-to-set-solo-mode"), plugin.getMessage("gui.team.lore.current-mode", "%mode%", (gameManager.getGameMode() == GameMode.SOLO ? "&a개인전" : "&c팀전"))));
-        soloModeMeta.getPersistentDataContainer().set(GAME_MODE_KEY, PersistentDataType.STRING, GameMode.SOLO.name());
-        soloModeItem.setItemMeta(soloModeMeta);
-        gui.setItem(7, soloModeItem);
+        
 
 
         ItemStack leaveItem = new ItemStack(Material.BARRIER);

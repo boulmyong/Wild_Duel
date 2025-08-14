@@ -2,7 +2,7 @@ package com.wildduel.listeners;
 
 import com.wildduel.WildDuel;
 import com.wildduel.game.GameManager;
-import com.wildduel.game.GameMode;
+
 import com.wildduel.game.TeamManager;
 import com.wildduel.gui.TeamGUI;
 import org.bukkit.ChatColor;
@@ -49,19 +49,7 @@ public class TeamGUIListener implements Listener {
         ItemMeta meta = clickedItem.getItemMeta();
         if (meta == null) return;
 
-        // Handle Game Mode Change
-        if (meta.getPersistentDataContainer().has(TeamGUI.GAME_MODE_KEY, PersistentDataType.STRING)) {
-            String gameModeName = meta.getPersistentDataContainer().get(TeamGUI.GAME_MODE_KEY, PersistentDataType.STRING);
-            try {
-                GameMode selectedMode = GameMode.valueOf(gameModeName);
-                gameManager.setGameMode(selectedMode);
-                player.sendMessage(plugin.getMessage("gui.team.success.gamemode-set", "%mode%", selectedMode.getDisplayName()));
-                teamGUI.open(player); // Refresh the GUI
-            } catch (IllegalArgumentException e) {
-                player.sendMessage(plugin.getMessage("gui.team.error.invalid-gamemode"));
-            }
-            return;
-        }
+        
 
         // Handle Team Leave
         if (clickedItem.getType() == Material.BARRIER) {

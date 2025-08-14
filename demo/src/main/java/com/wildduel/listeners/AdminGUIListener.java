@@ -4,6 +4,7 @@ import com.wildduel.WildDuel;
 import com.wildduel.gui.AdminGUI;
 import com.wildduel.gui.TeamAdminGUI;
 import com.wildduel.game.GameManager;
+import com.wildduel.game.GameMode;
 import com.wildduel.game.GameState;
 import com.wildduel.game.TeamManager;
 import com.wildduel.game.TpaManager;
@@ -37,6 +38,10 @@ public class AdminGUIListener implements Listener {
     public void onInventoryClick(InventoryClickEvent event) {
         InventoryView view = event.getView();
         if (!view.getTitle().equals(plugin.getMessage("gui.admin.title"))) {
+            return;
+        }
+
+        if (event.getClickedInventory() != view.getTopInventory()) {
             return;
         }
 
@@ -82,6 +87,14 @@ public class AdminGUIListener implements Listener {
                 refreshGui = false;
                 break;
 
+            // Game Mode
+            case RED_BANNER: // Team Mode
+                setGameMode(admin, GameMode.TEAM);
+                break;
+            case BLUE_BANNER: // Solo Mode
+                setGameMode(admin, GameMode.SOLO);
+                break;
+
             // Initial Farming Time
             case REDSTONE_BLOCK: // -60s
                 updatePrepTime(admin, -60);
@@ -112,6 +125,15 @@ public class AdminGUIListener implements Listener {
         if (refreshGui) {
             new AdminGUI(gameManager, teamManager, tpaManager, teamAdminManager).open(admin);
         }
+    }
+
+    private void setGameMode(Player admin, GameMode mode) {
+        if (gameManager.getGameState() != GameState.LOBBY) {
+            admin.sendMessage(plugin.getMessage("error.must-be-lobby"));
+            return;
+        }
+        gameManager.setGameMode(mode);
+        admin.sendMessage(plugin.getMessage("command.setmode.success", "%mode%", mode.getDisplayName()));
     }
 
     private void toggleAutoSmelt(Player admin) {

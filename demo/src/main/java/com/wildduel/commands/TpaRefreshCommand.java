@@ -1,5 +1,6 @@
 package com.wildduel.commands;
 
+import com.wildduel.WildDuel;
 import com.wildduel.game.TpaManager;
 
 import org.bukkit.Bukkit;
@@ -19,31 +20,31 @@ public class TpaRefreshCommand implements CommandExecutor {
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (!sender.hasPermission("wildduel.admin")) {
-            sender.sendMessage("§cYou do not have permission to use this command.");
+            sender.sendMessage(WildDuel.getInstance().getMessage("error.no-permission"));
             return true;
         }
 
         if (args.length < 1) {
-            sender.sendMessage("§cUsage: /tparefresh <player|all>");
+            sender.sendMessage(WildDuel.getInstance().getMessage("command.tparefresh.usage"));
             return true;
         }
 
         if (args[0].equalsIgnoreCase("all")) {
             tpaManager.refreshAllCooldowns();
-            sender.sendMessage("§a[TPA] 전체 플레이어의 쿨타임을 초기화했습니다.");
+            sender.sendMessage(WildDuel.getInstance().getMessage("command.tparefresh.success-all"));
             return true;
         }
 
         Player target = Bukkit.getPlayer(args[0]);
         if (target == null) {
-            sender.sendMessage("§c[TPA] 해당 플레이어는 온라인이 아닙니다.");
+            sender.sendMessage(WildDuel.getInstance().getMessage("error.player-not-found"));
             return true;
         }
 
         if (tpaManager.refreshCooldown(target)) {
-            sender.sendMessage("§a[TPA] " + target.getName() + "님의 쿨타임을 초기화했습니다.");
+            sender.sendMessage(WildDuel.getInstance().getMessage("command.tparefresh.success-player", "%player%", target.getName()));
         } else {
-            sender.sendMessage("§c[TPA] " + target.getName() + "님은 현재 쿨타임이 없습니다.");
+            sender.sendMessage(WildDuel.getInstance().getMessage("command.tparefresh.no-cooldown", "%player%", target.getName()));
         }
 
         return true;

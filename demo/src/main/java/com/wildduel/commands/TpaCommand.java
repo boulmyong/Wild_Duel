@@ -20,24 +20,24 @@ public class TpaCommand implements CommandExecutor {
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (!(sender instanceof Player)) {
-            sender.sendMessage(WildDuel.getInstance().getMessage("error-must-be-player"));
+            sender.sendMessage(WildDuel.getInstance().getMessage("error.player-only"));
             return true;
         }
 
         Player requester = (Player) sender;
         if (args.length < 1) {
-            requester.sendMessage(WildDuel.getInstance().getMessage("tpa-usage"));
+            requester.sendMessage(WildDuel.getInstance().getMessage("tpa.usage"));
             return true;
         }
 
         Player target = Bukkit.getPlayer(args[0]);
         if (target == null) {
-            requester.sendMessage(WildDuel.getInstance().getMessage("error-player-not-found"));
+            requester.sendMessage(WildDuel.getInstance().getMessage("error.player-not-found"));
             return true;
         }
 
         if (requester.equals(target)) {
-            requester.sendMessage(WildDuel.getInstance().getMessage("error-cannot-tpa-self"));
+            requester.sendMessage(WildDuel.getInstance().getMessage("tpa.error.cannot-tpa-self"));
             return true;
         }
 

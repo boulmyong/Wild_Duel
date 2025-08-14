@@ -2,13 +2,10 @@ ko:
   # ================================================
   # §a일반 메시지 (General Messages)
   # ================================================
-  game-started: "&a게임이 시작되었습니다!"
-  game-ended: "&a게임이 종료되었습니다!"
-  team-join: "&e%team%&a 팀에 합류했습니다."
-  team-leave: "&e%team%&c 팀에서 나왔습니다."
   info.game-in-progress-spectator: "&e게임이 이미 진행 중입니다. 관전 모드로 전환됩니다."
   info.battle-started: "&c전투가 시작되었습니다!"
   info.farming-time-remaining: "&e[안내] &f파밍 시간이 %minutes%분 남았습니다!"
+  info.spectator-mode: "&e게임이 진행 중이므로 관전 모드로 전환됩니다."
 
   # ================================================
   # §c오류 메시지 (Error Messages)
@@ -32,9 +29,6 @@ ko:
   # ================================================
   # §e명령어 관련 메시지 (Command Messages)
   # ================================================
-  command.start.success: "&a게임 카운트다운을 시작합니다!"
-  command.start.fail: "&c지금은 게임을 시작할 수 없습니다: &e%reason%"
-
   command.randomteam.success: "&a모든 온라인 플레이어를 랜덤 팀에 배정했습니다."
   command.randomteam.no-players: "&c팀을 배정할 플레이어가 온라인에 없습니다."
 
@@ -54,7 +48,6 @@ ko:
 
   command.setinventory.gui-opened: "&a시작 아이템 설정 GUI를 엽니다."
 
-  command.reset.confirm-warning: "&e⚠️ 정말로 게임과 월드를 완전히 초기화하시겠습니까?\n&c이 작업은 되돌릴 수 없으며, 현재 게임 월드를 삭제합니다.\n&e계속하려면 &l/wd reset confirm&e 을 입력하세요."
   command.reset.broadcast-start: "&c⚠️ 관리자에 의해 전체 게임 초기화가 시작되었습니다. 잠시 렉이 발생할 수 있습니다."
   command.reset.admin-start: "&a[WD] 초기화 작업을 시작합니다..."
   command.reset.broadcast-complete: "&6✅ 게임과 월드가 성공적으로 초기화되었습니다!"
@@ -68,7 +61,6 @@ ko:
   tpa.error.not-same-team: "&c같은 팀원에게만 TPA 요청을 보낼 수 있습니다."
   tpa.error.cooldown: "&cTPA 쿨타임이 %seconds%초 남았습니다."
   tpa.error.already-sent: "&c이미 보낸 TPA 요청이 있습니다. 취소하려면 /tpacancel을 입력하세요."
-  tpa.error.no-request-to-respond: "&c해당 TPA 요청을 찾을 수 없습니다."
   tpa.error.no-request-to-cancel: "&c취소할 TPA 요청이 없습니다."
   tpa.error.timeout-requester: "&cTPA 요청이 시간 초과로 취소되었습니다."
   tpa.error.timeout-target: "&c%player%님의 TPA 요청이 시간 초과로 취소되었습니다."
@@ -106,26 +98,20 @@ ko:
   gui.admin.title: "&4[관리자 패널] 와일드 듀얼"
   gui.admin.start.title: "&e어떤 작업을 수행하시겠습니까? "
   gui.admin.start.regen-button: "&c[월드 재생성]"
-  gui.admin.start.regen-button-lore: "&c모든 플레이어를 내보내고 맵을 초기화합니다.\n&c(서버 랙 유발)"
+  gui.admin.start.regen-button-lore: "&c모든 플레이어를 내보내고 맵을 초기화합니다.
+&c(서버 랙 유발)"
   gui.admin.start.start-button: "&a[즉시 시작]"
   gui.admin.start.start-button-lore: "&a현재 준비된 월드에서 즉시 게임을 시작합니다."
   gui.admin.start.separator: " &7또는 "
 
   # --- 팀 선택 GUI ---
   gui.team.title: "&1팀 및 게임 모드 설정"
-  gui.team.success.gamemode-set: "&a게임 모드가 %mode%(으)로 설정되었습니다."
-  gui.team.error.invalid-gamemode: "&c잘못된 게임 모드입니다."
   gui.team.info.left-team: "&7팀에서 나왔습니다."
   gui.team.button.join-team: "%color%%team% 팀 참가"
   gui.team.lore.click-to-join: "&7클릭하여 이 팀에 합류합니다."
   gui.team.lore.current-members: "&f현재 팀원 (%count%명):"
   gui.team.lore.member-name: "&7- %player%"
   gui.team.lore.more-members: "&7...외 %count%명"
-  gui.team.button.team-mode: "&c팀전 모드"
-  gui.team.lore.click-to-set-team-mode: "&7클릭하여 게임 모드를 팀전으로 설정합니다."
-  gui.team.lore.current-mode: "&f현재 모드: %mode%"
-  gui.team.button.solo-mode: "&9개인전 모드"
-  gui.team.lore.click-to-set-solo-mode: "&7클릭하여 게임 모드를 개인전으로 설정합니다."
   gui.team.button.leave-team: "&c팀 나가기"
 
   # --- 팀 관리자 GUI ---
@@ -154,24 +140,23 @@ ko:
   # §6게임 플레이 관련 메시지 (Gameplay Messages)
   # ================================================
   # --- 승리/패배/무승부 ---
-  win.player: "&a%player%님 승리!"
-  win.broadcast.player: "&f승리: &a%player%님!"
-  win.team: "%color%%team% 팀 승리!"
-  win.broadcast.team: "&f승리: %color%%team% 팀!"
-  win.draw: "게임이 무승부로 종료되었습니다!"
-  win.broadcast.draw: "&f승리: 무승부!"
+  win.broadcast.player: "&6%player%님이 최종 승리했습니다!"
+  win.title.player: "&6승리!"
+  win.broadcast.team: "%color%%team%&f이(가) 최종 승리했습니다!"
+  win.title.team: "%color%%team% 승리!"
+  win.broadcast.draw: "&7무승부입니다!"
+  win.title.draw: "&7무승부"
 
   # --- 타이틀 및 보스바 ---
   title.game-starting: "&a게임이 곧 시작됩니다..."
-  title.game-ended: "&e           게임 종료"
-  title.subtitle.teleport-to-lobby: "10초 후 로비로 이동합니다."
+  title.subtitle.teleport-to-lobby: "&7잠시 후 로비로 이동합니다."
   bossbar.farming-time: "파밍 시간"
   bossbar.farming-time-remaining: "남은 파밍 시간: %time%"
   actionbar.center-coords: "&e중앙 좌표: &fX: %x%, Z: %z%"
 
   # --- 구분선 ---
-  separator.heavy: "&a========================================"
   separator.blank: " "
+  separator.game-end: "&3=============================="
 
   # ================================================
   # §9도움말 메시지 (Help Messages)
@@ -219,13 +204,10 @@ en:
   # ================================================
   # §aGeneral Messages
   # ================================================
-  game-started: "&aThe game has started!"
-  game-ended: "&aThe game has ended!"
-  team-join: "&aYou have joined the &e%team%&a team."
-  team-leave: "&cYou have left the &e%team%&c team."
   info.game-in-progress-spectator: "&eA game is already in progress. You will be a spectator."
   info.battle-started: "&cThe battle has begun!"
   info.farming-time-remaining: "&e[Notice] &fFarming time remaining: %minutes% minutes!"
+  info.spectator-mode: "&eA game is in progress, so you have been put into spectator mode."
 
   # ================================================
   # §cError Messages
@@ -249,9 +231,6 @@ en:
   # ================================================
   # §eCommand Messages
   # ================================================
-  command.start.success: "&aStarting game countdown!"
-  command.start.fail: "&cCannot start the game right now: &e%reason%"
-
   command.randomteam.success: "&aAssigned all online players to random teams."
   command.randomteam.no-players: "&cNo players online to assign to teams."
 
@@ -271,7 +250,6 @@ en:
 
   command.setinventory.gui-opened: "&aOpening the start item configuration GUI."
 
-  command.reset.confirm-warning: "&e⚠️ Are you sure you want to completely reset the game and world?\n&cThis action cannot be undone and will delete the current game world.\n&eType &l/wd reset confirm&e to continue."
   command.reset.broadcast-start: "&c⚠️ A full game reset has been initiated by an administrator. You may experience some lag."
   command.reset.admin-start: "&a[WD] Starting reset process..."
   command.reset.broadcast-complete: "&6✅ The game and world have been successfully reset!"
@@ -285,7 +263,6 @@ en:
   tpa.error.not-same-team: "&cYou can only send TPA requests to your teammates."
   tpa.error.cooldown: "&cYou have a TPA cooldown of %seconds% seconds remaining."
   tpa.error.already-sent: "&cYou already have a pending TPA request. Type /tpacancel to cancel it."
-  tpa.error.no-request-to-respond: "&cCould not find that TPA request."
   tpa.error.no-request-to-cancel: "&cYou have no TPA request to cancel."
   tpa.error.timeout-requester: "&cYour TPA request has timed out."
   tpa.error.timeout-target: "&cThe TPA request from %player% has timed out."
@@ -323,26 +300,20 @@ en:
   gui.admin.title: "&4[Admin Panel] Wild Duel"
   gui.admin.start.title: "&eWhat would you like to do? "
   gui.admin.start.regen-button: "&c[Regenerate World]"
-  gui.admin.start.regen-button-lore: "&cKicks all players and resets the map.\n&c(Causes server lag)"
+  gui.admin.start.regen-button-lore: "&cKicks all players and resets the map.
+&c(Causes server lag)"
   gui.admin.start.start-button: "&a[Start Immediately]"
   gui.admin.start.start-button-lore: "&aStarts the game immediately in the current world."
   gui.admin.start.separator: " &7or "
 
   # --- Team Selection GUI ---
   gui.team.title: "&1Team & Game Mode Setup"
-  gui.team.success.gamemode-set: "&aGame mode set to %mode%."
-  gui.team.error.invalid-gamemode: "&cInvalid game mode."
   gui.team.info.left-team: "&7You have left the team."
   gui.team.button.join-team: "&eJoin %color%%team% Team"
   gui.team.lore.click-to-join: "&7Click to join this team."
   gui.team.lore.current-members: "&fCurrent Members (%count%):"
   gui.team.lore.member-name: "&7- %player%"
   gui.team.lore.more-members: "&7...and %count% more"
-  gui.team.button.team-mode: "&cTeam Mode"
-  gui.team.lore.click-to-set-team-mode: "&7Click to set the game mode to Team Mode."
-  gui.team.lore.current-mode: "&fCurrent Mode: %mode%"
-  gui.team.button.solo-mode: "&9Solo Mode"
-  gui.team.lore.click-to-set-solo-mode: "&7Click to set the game mode to Solo Mode."
   gui.team.button.leave-team: "&cLeave Team"
 
   # --- Team Admin GUI ---
@@ -371,24 +342,23 @@ en:
   # §6Gameplay Messages
   # ================================================
   # --- Win/Loss/Draw ---
-  win.player: "&a%player% wins!"
-  win.broadcast.player: "&fWinner: &a%player%."
-  win.team: "%color%%team% team wins!"
-  win.broadcast.team: "&fWinner: %color%%team% team!"
-  win.draw: "The game is a draw!"
-  win.broadcast.draw: "&fWinner: Draw!"
+  win.broadcast.player: "&6%player% is the final winner!"
+  win.title.player: "&6Victory!"
+  win.broadcast.team: "%color%%team% &fis the final winner!"
+  win.title.team: "%color%%team% Victory!"
+  win.broadcast.draw: "&7It's a draw!"
+  win.title.draw: "&7Draw"
 
   # --- Titles & Bossbar ---
   title.game-starting: "&aThe game is about to start..."
-  title.game-ended: "&e           Game Over"
-  title.subtitle.teleport-to-lobby: "Teleporting to lobby in 10 seconds."
+  title.subtitle.teleport-to-lobby: "&7Teleporting to the lobby shortly."
   bossbar.farming-time: "Farming Time"
   bossbar.farming-time-remaining: "Time Remaining: %time%"
   actionbar.center-coords: "&eCenter: &fX: %x%, Z: %z%"
 
   # --- Separators ---
-  separator.heavy: "&a========================================"
   separator.blank: " "
+  separator.game-end: "&3=============================="
 
   # ================================================
   # §9Help Messages

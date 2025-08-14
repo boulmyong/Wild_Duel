@@ -74,8 +74,7 @@ public class TeamAdminGUIListener implements Listener {
             selection.setSelectedTeam(getTeamTypeFromMaterial(type));
         } else if (type == Material.ANVIL) {
             applyTeamSelection(admin, selection);
-            refreshGui = false;
-            admin.closeInventory();
+            refreshGui = true;
         } else {
             refreshGui = false;
         }
@@ -102,6 +101,11 @@ public class TeamAdminGUIListener implements Listener {
         if (selectedPlayer == null) {
             admin.sendMessage(plugin.getMessage("gui.teamadmin.error.player-offline"));
             return;
+        }
+
+        // 관전자였던 플레이어를 다른 팀으로 옮길 경우 서바이벌 모드로 변경
+        if (selectedPlayer.getGameMode() == GameMode.SPECTATOR && selectedTeam != TeamType.SPECTATOR) {
+            selectedPlayer.setGameMode(GameMode.SURVIVAL);
         }
 
         if (selectedTeam == TeamType.RED || selectedTeam == TeamType.BLUE) {

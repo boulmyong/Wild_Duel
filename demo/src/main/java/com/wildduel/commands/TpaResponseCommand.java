@@ -1,5 +1,6 @@
 package com.wildduel.commands;
 
+import com.wildduel.WildDuel;
 import com.wildduel.game.TpaManager;
 
 import org.bukkit.command.Command;
@@ -18,7 +19,7 @@ public class TpaResponseCommand implements CommandExecutor {
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (!(sender instanceof Player)) {
-            sender.sendMessage("This command can only be used by a player.");
+            sender.sendMessage(WildDuel.getInstance().getMessage("error.player-only"));
             return true;
         }
 

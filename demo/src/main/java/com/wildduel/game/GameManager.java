@@ -369,87 +369,87 @@ public class GameManager {
     }
 
     public synchronized void checkWinCondition() {
-        if (getGameState() != GameState.BATTLE || gameWorld == null) return;
+        if (getGameState() != GameState.BATTLE || gameWorld == null) {
+            return;
+        }
 
         List<Player> alivePlayers = gameWorld.getPlayers().stream()
                 .filter(p -> p.getGameMode() == org.bukkit.GameMode.SURVIVAL && p.isOnline())
                 .toList();
 
         if (gameMode == GameMode.TEAM) {
-            // Team Game Logic
-            List<TeamManager.TeamData> activeTeams = new ArrayList<>();
-            for (TeamManager.TeamData teamData : teamManager.getTeams()) {
-                if (teamData.getPlayers().stream().anyMatch(alivePlayers::contains)) {
-                    activeTeams.add(teamData);
+            java.util.Set<TeamManager.TeamData> aliveTeams = new java.util.HashSet<>();
+            for (Player player : alivePlayers) {
+                String teamName = teamManager.getPlayerTeam(player);
+                if (teamName != null) {
+                    for (TeamManager.TeamData team : teamManager.getTeams()) {
+                        if (team.getName().equals(teamName)) {
+                            aliveTeams.add(team);
+                            break;
+                        }
+                    }
                 }
             }
 
-            if (activeTeams.size() <= 1) {
-                endGame(activeTeams.isEmpty() ? null : activeTeams.get(0));
+            if (aliveTeams.size() <= 1) {
+                TeamManager.TeamData winner = aliveTeams.isEmpty() ? null : aliveTeams.iterator().next();
+                endGame(winner);
             }
-        } else {
-            // FFA Logic
+        } else { // Solo mode
             if (alivePlayers.size() <= 1) {
-                endGame(alivePlayers.isEmpty() ? null : alivePlayers.get(0));
+                Player winner = alivePlayers.isEmpty() ? null : alivePlayers.get(0);
+                endGame(winner);
             }
         }
     }
 
-    private void endGame(Player winner) {
-        if (getGameState() == GameState.ENDED) return;
+    private void endGame(Object winner) {
+        if (getGameState() == GameState.ENDED) {
+            return;
+        }
         setGameState(GameState.ENDED);
 
-        String winnerMessage = plugin.getMessage("win.player", "%player%", winner.getName());
-        String broadcastWinner = plugin.getMessage("win.broadcast.player", "%player%", winner.getName());
+        String broadcastMessage;
+        String titleMessage;
 
-        broadcastEndMessage(winnerMessage, broadcastWinner);
-    }
-
-    private void endGame(TeamManager.TeamData winner) {
-        if (getGameState() == GameState.ENDED) return;
-        setGameState(GameState.ENDED);
-
-        String winnerMessage;
-        String broadcastWinner;
-
-        if (winner != null && !winner.getPlayers().isEmpty()) {
-            if (winner.getPlayers().size() == 1) {
-                Player soloWinner = new ArrayList<>(winner.getPlayers()).get(0);
-                winnerMessage = plugin.getMessage("win.player", "%player%", soloWinner.getName());
-                broadcastWinner = plugin.getMessage("win.broadcast.player", "%player%", soloWinner.getName());
-            } else {
-                winnerMessage = plugin.getMessage("win.team", "%color%", winner.getColor().toString(), "%team%", winner.getName());
-                broadcastWinner = plugin.getMessage("win.broadcast.team", "%color%", winner.getColor().toString(), "%team%", winner.getName());
-            }
+        if (winner instanceof Player) {
+            Player winningPlayer = (Player) winner;
+            broadcastMessage = plugin.getMessage("win.broadcast.player", "%player%", winningPlayer.getName());
+            titleMessage = plugin.getMessage("win.title.player");
+        } else if (winner instanceof TeamManager.TeamData) {
+            TeamManager.TeamData winningTeam = (TeamManager.TeamData) winner;
+            broadcastMessage = plugin.getMessage("win.broadcast.team", "%color%", winningTeam.getColor().toString(), "%team%", winningTeam.getName());
+            titleMessage = plugin.getMessage("win.title.team", "%color%", winningTeam.getColor().toString(), "%team%", winningTeam.getName());
         } else {
-            winnerMessage = plugin.getMessage("win.draw");
-            broadcastWinner = plugin.getMessage("win.broadcast.draw");
+            broadcastMessage = plugin.getMessage("win.broadcast.draw");
+            titleMessage = plugin.getMessage("win.title.draw");
         }
 
-        broadcastEndMessage(winnerMessage, broadcastWinner);
-    }
-
-    private void broadcastEndMessage(String winnerMessage, String broadcastWinner) {
-        Bukkit.broadcastMessage(plugin.getMessage("separator.heavy"));
-        Bukkit.broadcastMessage(plugin.getMessage("title.game-ended"));
-        Bukkit.broadcastMessage(plugin.getMessage("separator.blank"));
-        Bukkit.broadcastMessage(broadcastWinner);
-        Bukkit.broadcastMessage(plugin.getMessage("separator.heavy"));
+        // Announce winner
+        String separator = plugin.getMessage("separator.game-end");
 
         for (Player player : Bukkit.getOnlinePlayers()) {
-            player.sendTitle(winnerMessage, plugin.getMessage("title.subtitle.teleport-to-lobby"), 10, 80, 20);
+            player.sendMessage(separator);
+            player.sendMessage(" "); // Send a space for a blank line
+            player.sendMessage(broadcastMessage);
+            player.sendMessage(" ");
+            player.sendMessage(separator);
+            player.sendTitle(titleMessage, plugin.getMessage("title.subtitle.teleport-to-lobby"), 10, 80, 20);
         }
 
+        // Cancel all game tasks
         if (gameTask != null) gameTask.cancel();
         if (timerBar != null) timerBar.removeAll();
         if (distanceDisplayTask != null) distanceDisplayTask.cancel();
+        if (saturationTask != null) saturationTask.cancel();
 
+        // Teleport everyone to lobby after a delay
         new BukkitRunnable() {
             @Override
             public void run() {
                 transitionToLobby();
             }
-        }.runTaskLater(WildDuel.getInstance(), 10 * 20);
+        }.runTaskLater(WildDuel.getInstance(), 10 * 20); // 10 seconds
     }
 
     public synchronized void resetGame() {
