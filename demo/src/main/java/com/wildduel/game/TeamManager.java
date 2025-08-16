@@ -50,7 +50,9 @@ public class TeamManager {
             return false; // Team does not exist
         }
 
-        leaveTeam(player); // Leave current team first
+        String oldTeamName = getPlayerTeam(player); // Get old team BEFORE leaving
+
+        leaveTeam(player); // This will remove the player from the old team and set their gamemode to ADVENTURE if they were a spectator.
 
         TeamData teamData = teams.get(teamName);
         teamData.getPlayers().add(player);
@@ -59,13 +61,17 @@ public class TeamManager {
         updatePlayerScoreboard(player, teamData);
         player.sendMessage(teamData.getColor() + "당신은 " + teamData.getName() + " 팀에 합류했습니다.");
 
-        // 관전자 팀에 합류하면 게임 모드 변경
-        if (teamName.equals(SPECTATOR_TEAM_NAME)) {
+        boolean wasSpectator = oldTeamName != null && oldTeamName.equals(SPECTATOR_TEAM_NAME);
+        boolean isNowSpectator = teamName.equals(SPECTATOR_TEAM_NAME);
+
+        if (isNowSpectator) {
             player.setGameMode(GameMode.SPECTATOR);
         } else {
-            // 다른 팀에 합류할 때, 만약 관전자였다면 게임 모드를 ADVENTURE로 변경
-            if (player.getGameMode() == GameMode.SPECTATOR) {
-                player.setGameMode(GameMode.ADVENTURE);
+            // The gamemode is already set to ADVENTURE by leaveTeam if they were a spectator.
+            if (wasSpectator) {
+                player.teleport(player.getWorld().getSpawnLocation());
+                // You might want to add a configurable message for this in messages.yml
+                player.sendMessage(ChatColor.AQUA + "팀에 합류하여 월드 스폰 지점으로 이동했습니다.");
             }
         }
         return true;

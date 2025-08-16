@@ -6,7 +6,6 @@ import com.wildduel.game.TeamManager;
 import com.wildduel.game.TeamType;
 import com.wildduel.gui.TeamAdminGUI;
 import org.bukkit.Bukkit;
-import org.bukkit.GameMode;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -59,7 +58,16 @@ public class TeamAdminGUIListener implements Listener {
         if (type == Material.PLAYER_HEAD && meta != null) {
             String uuidString = meta.getPersistentDataContainer().get(TeamAdminGUI.PLAYER_UUID_KEY, PersistentDataType.STRING);
             if (uuidString != null) {
-                selection.setSelectedPlayer(UUID.fromString(uuidString));
+                UUID playerUUID = UUID.fromString(uuidString);
+                selection.setSelectedPlayer(playerUUID);
+
+                // Get the player's current team and update the selection state
+                Player clickedPlayer = Bukkit.getPlayer(playerUUID);
+                if (clickedPlayer != null) {
+                    String teamName = teamManager.getPlayerTeam(clickedPlayer);
+                    TeamType teamType = getTeamTypeFromName(teamName);
+                    selection.setSelectedTeam(teamType);
+                }
             }
         } else if (type == Material.ARROW) {
             if (clickedItem.getItemMeta().getDisplayName().contains("이전")) {
@@ -70,7 +78,7 @@ public class TeamAdminGUIListener implements Listener {
             } else { // "다음"
                 selection.setCurrentPage(selection.getCurrentPage() + 1);
             }
-        } else if (type.name().endsWith("_WOOL") || type == Material.GLASS) {
+        } else if (type.name().endsWith("_WOOL") || type == Material.SPYGLASS) {
             selection.setSelectedTeam(getTeamTypeFromMaterial(type));
         } else if (type == Material.ANVIL) {
             applyTeamSelection(admin, selection);
@@ -127,7 +135,20 @@ public class TeamAdminGUIListener implements Listener {
     private TeamType getTeamTypeFromMaterial(Material material) {
         if (material == Material.RED_WOOL) return TeamType.RED;
         if (material == Material.BLUE_WOOL) return TeamType.BLUE;
-        if (material == Material.GLASS) return TeamType.SPECTATOR;
+        if (material == Material.SPYGLASS) return TeamType.SPECTATOR;
+        return TeamType.NONE;
+    }
+
+    // Helper method to convert team name string to TeamType enum
+    private TeamType getTeamTypeFromName(String name) {
+        if (name == null) {
+            return TeamType.NONE;
+        }
+        for (TeamType type : TeamType.values()) {
+            if (type.getName().equalsIgnoreCase(name)) {
+                return type;
+            }
+        }
         return TeamType.NONE;
     }
 }

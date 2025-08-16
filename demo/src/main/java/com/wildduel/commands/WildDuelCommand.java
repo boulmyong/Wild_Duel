@@ -119,7 +119,7 @@ public class WildDuelCommand implements CommandExecutor {
                     sender.sendMessage(plugin.getMessage("error.player-only"));
                     return;
                 }
-                new AdminGUI(gameManager, teamManager, tpaManager, teamAdminManager).open(player);
+                new AdminGUI(plugin, gameManager, teamManager, tpaManager, teamAdminManager).open(player);
                 break;
             case "st":
                 if (args.length > 1) {
