@@ -5,7 +5,7 @@
 
     <groupId>com.wildduel</groupId>
     <artifactId>wildduel</artifactId>
-    <version>3.4</version>
+    <version>3.4.1</version>
     <packaging>jar</packaging>
 
     <name>WildDuel</name>
