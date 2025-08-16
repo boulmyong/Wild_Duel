@@ -5,6 +5,7 @@ import com.wildduel.game.GameManager;
 import com.wildduel.game.GameState;
 import org.bukkit.Material;
 import org.bukkit.configuration.ConfigurationSection;
+import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
@@ -44,9 +45,20 @@ public class GameMechanicsListener implements Listener {
         if (gameManager.isAutoSmeltEnabled() && (gameManager.getGameState() == GameState.FARMING || gameManager.getGameState() == GameState.BATTLE)) {
             Material blockType = event.getBlock().getType();
             if (smeltMap.containsKey(blockType)) {
-                event.setDropItems(false);
-                Material smeltedItem = smeltMap.get(blockType);
-                event.getBlock().getWorld().dropItem(event.getBlock().getLocation().add(0.5, 0.5, 0.5), new ItemStack(smeltedItem, 1));
+                Player player = event.getPlayer();
+                event.setDropItems(false); // Don't drop the original ore
+                
+                Material smeltedItemType = smeltMap.get(blockType);
+                ItemStack smeltedItemStack = new ItemStack(smeltedItemType, 1);
+
+                // Give the item directly to the player
+                HashMap<Integer, ItemStack> leftover = player.getInventory().addItem(smeltedItemStack);
+
+                // If the player's inventory is full, drop the item at their location
+                if (!leftover.isEmpty()) {
+                    player.getWorld().dropItemNaturally(player.getLocation(), leftover.get(0));
+                    player.sendMessage("§c인벤토리가 가득 차서 아이템을 바닥에 드롭했습니다.");
+                }
             }
         }
     }

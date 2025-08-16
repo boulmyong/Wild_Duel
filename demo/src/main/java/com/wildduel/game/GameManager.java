@@ -6,6 +6,8 @@ import net.md_5.bungee.api.chat.HoverEvent;
 import net.md_5.bungee.api.chat.TextComponent;
 import net.md_5.bungee.api.chat.hover.content.Text;
 import org.bukkit.*;
+import org.bukkit.advancement.Advancement;
+import org.bukkit.advancement.AdvancementProgress;
 import org.bukkit.boss.BarColor;
 import org.bukkit.boss.BarStyle;
 import org.bukkit.boss.BossBar;
@@ -16,12 +18,12 @@ import org.bukkit.scheduler.BukkitRunnable;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.CompletableFuture;
 import java.util.logging.Level;
 import net.md_5.bungee.api.ChatMessageType;
-import net.md_5.bungee.api.chat.TextComponent;
 
 public class GameManager {
 
@@ -84,11 +86,24 @@ public class GameManager {
         Location spawnPoint = lobbyWorld.getSpawnLocation().clone().add(0.5, 0, 0.5);
         io.papermc.lib.PaperLib.teleportAsync(player, spawnPoint);
         player.setGameMode(org.bukkit.GameMode.ADVENTURE);
+        
+        // Reset Player Data
         player.getInventory().clear();
         player.setHealth(20.0);
         player.setFoodLevel(20);
+        player.setExp(0F);
+        player.setLevel(0);
         for (PotionEffect effect : player.getActivePotionEffects()) {
             player.removePotionEffect(effect.getType());
+        }
+
+        // Reset Advancements
+        Iterator<Advancement> iterator = Bukkit.getServer().advancementIterator();
+        while (iterator.hasNext()) {
+            AdvancementProgress progress = player.getAdvancementProgress(iterator.next());
+            for (String criteria : progress.getAwardedCriteria()) {
+                progress.revokeCriteria(criteria);
+            }
         }
     }
 
@@ -179,7 +194,6 @@ public class GameManager {
         }
 
         List<Player> allPlayers = new ArrayList<>(lobbyWorld.getPlayers());
-        // teamManager.isSpectator()를 사용하여 관전자를 제외한 참가자 목록을 생성합니다.
         List<Player> participants = allPlayers.stream()
                 .filter(p -> !teamManager.isSpectator(p))
                 .toList();
@@ -245,12 +259,24 @@ public class GameManager {
         for (Player player : playersToTeleport) {
             teleportFutures.add(teleportToCenter(player, gameWorld));
             player.setGameMode(org.bukkit.GameMode.SURVIVAL);
+            
+            // Reset Player Data
             player.setExp(0F);
             player.setLevel(0);
             player.getInventory().clear();
             for (PotionEffect effect : player.getActivePotionEffects()) {
                 player.removePotionEffect(effect.getType());
             }
+            
+            // Reset Advancements
+            Iterator<Advancement> iterator = Bukkit.getServer().advancementIterator();
+            while (iterator.hasNext()) {
+                AdvancementProgress progress = player.getAdvancementProgress(iterator.next());
+                for (String criteria : progress.getAwardedCriteria()) {
+                    progress.revokeCriteria(criteria);
+                }
+            }
+
             WildDuel.getInstance().getDefaultStartInventory().apply(player);
         }
 

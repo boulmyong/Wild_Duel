@@ -98,8 +98,7 @@ ko:
   gui.admin.title: "&4[관리자 패널] 와일드 듀얼"
   gui.admin.start.title: "&e어떤 작업을 수행하시겠습니까? "
   gui.admin.start.regen-button: "&c[월드 재생성]"
-  gui.admin.start.regen-button-lore: "&c모든 플레이어를 내보내고 맵을 초기화합니다.
-&c(서버 랙 유발)"
+  gui.admin.start.regen-button-lore: "&c모든 플레이어를 내보내고 맵을 초기화합니다.&c(서버 랙 유발)"
   gui.admin.start.start-button: "&a[즉시 시작]"
   gui.admin.start.start-button-lore: "&a현재 준비된 월드에서 즉시 게임을 시작합니다."
   gui.admin.start.separator: " &7또는 "
@@ -134,6 +133,7 @@ ko:
 
   # --- 시작 아이템 GUI ---
   gui.startitem.title: "&9시작 아이템 설정"
+  gui.startitem.button.save: "&a✔ 저장"
   gui.startitem.success.saved: "&a시작 아이템 설정이 저장되었습니다!"
 
   # ================================================
@@ -336,6 +336,7 @@ en:
 
   # --- Start Item GUI ---
   gui.startitem.title: "&9Configure Start Items"
+  gui.startitem.button.save: "&a✔ Save"
   gui.startitem.success.saved: "&aStart item configuration has been saved!"
 
   # ================================================

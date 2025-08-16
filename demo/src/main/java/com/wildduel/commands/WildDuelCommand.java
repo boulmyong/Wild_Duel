@@ -119,7 +119,7 @@ public class WildDuelCommand implements CommandExecutor {
                     sender.sendMessage(plugin.getMessage("error.player-only"));
                     return;
                 }
-                new AdminGUI(plugin, gameManager, teamManager, tpaManager, teamAdminManager).open(player);
+                new AdminGUI(plugin, gameManager, null).open(player);
                 break;
             case "st":
                 if (args.length > 1) {
@@ -155,7 +155,7 @@ public class WildDuelCommand implements CommandExecutor {
                     sender.sendMessage(plugin.getMessage("error.player-only"));
                     return;
                 }
-                new StartItemGUI(plugin.getDefaultStartInventory()).open(player);
+                new StartItemGUI(plugin, plugin.getDefaultStartInventory()).open(player);
                 player.sendMessage(plugin.getMessage("command.setinventory.gui-opened"));
                 break;
             case "setmode":

@@ -3,6 +3,7 @@ C:\Users\user0\Desktop\Wild_Duel\demo\src\main\java\com\wildduel\listeners\TeamG
 C:\Users\user0\Desktop\Wild_Duel\demo\src\main\java\com\wildduel\listeners\GameLifecycleListener.java
 C:\Users\user0\Desktop\Wild_Duel\demo\src\main\java\com\wildduel\WildDuel.java
 C:\Users\user0\Desktop\Wild_Duel\demo\src\main\java\com\wildduel\gui\StartItemGUI.java
+C:\Users\user0\Desktop\Wild_Duel\demo\src\main\java\com\wildduel\gui\WorldSettingsGUI.java
 C:\Users\user0\Desktop\Wild_Duel\demo\src\main\java\com\wildduel\game\TpaManager.java
 C:\Users\user0\Desktop\Wild_Duel\demo\src\main\java\com\wildduel\listeners\AdminGUIListener.java
 C:\Users\user0\Desktop\Wild_Duel\demo\src\main\java\com\wildduel\listeners\PlayerEventListener.java
@@ -11,6 +12,7 @@ C:\Users\user0\Desktop\Wild_Duel\demo\src\main\java\com\wildduel\util\PlayerInve
 C:\Users\user0\Desktop\Wild_Duel\demo\src\main\java\com\wildduel\gui\AdminGUI.java
 C:\Users\user0\Desktop\Wild_Duel\demo\src\main\java\com\wildduel\commands\WildDuelTabCompleter.java
 C:\Users\user0\Desktop\Wild_Duel\demo\src\main\java\com\wildduel\commands\TpaCommand.java
+C:\Users\user0\Desktop\Wild_Duel\demo\src\main\java\com\wildduel\gui\GameSettingsGUI.java
 C:\Users\user0\Desktop\Wild_Duel\demo\src\main\java\com\wildduel\commands\TeamSelectCommand.java
 C:\Users\user0\Desktop\Wild_Duel\demo\src\main\java\com\wildduel\game\WorldManager.java
 C:\Users\user0\Desktop\Wild_Duel\demo\src\main\java\com\wildduel\game\GameManager.java
@@ -30,3 +32,4 @@ C:\Users\user0\Desktop\Wild_Duel\demo\src\main\java\com\wildduel\game\GameState.
 C:\Users\user0\Desktop\Wild_Duel\demo\src\main\java\com\wildduel\game\TeamAdminManager.java
 C:\Users\user0\Desktop\Wild_Duel\demo\src\main\java\com\wildduel\commands\TpaCancelCommand.java
 C:\Users\user0\Desktop\Wild_Duel\demo\src\main\java\com\wildduel\listeners\StartItemGUIListener.java
+C:\Users\user0\Desktop\Wild_Duel\demo\src\main\java\com\wildduel\gui\TimeSettingsGUI.java

@@ -4,8 +4,8 @@
 # Set the language for the plugin. (ko: Korean, en: English)
 language: ko
 
-tpa-request-timeout: 60
-tpa-cooldown-seconds: 180
+tpa-request-timeout: 30
+tpa-cooldown-seconds: 30
 
 default-start-items:
   - material: STONE_AXE
