@@ -113,7 +113,7 @@ public class TeamAdminGUI {
         switch (teamType) {
             case RED: return Material.RED_WOOL;
             case BLUE: return Material.BLUE_WOOL;
-            case SPECTATOR: return Material.GLASS;
+            case SPECTATOR: return Material.SPYGLASS;
             default: return Material.WHITE_WOOL;
         }
     }

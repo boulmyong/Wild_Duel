@@ -86,13 +86,13 @@ public class TeamAdminGUIListener implements Listener {
 
     private void applyTeamSelection(Player admin, TeamAdminManager.PlayerSelection selection) {
         UUID selectedPlayerUUID = selection.getSelectedPlayer();
-        TeamType selectedTeam = selection.getSelectedTeam();
+        TeamType selectedTeamType = selection.getSelectedTeam();
 
         if (selectedPlayerUUID == null) {
             admin.sendMessage(plugin.getMessage("gui.teamadmin.error.no-player-selected"));
             return;
         }
-        if (selectedTeam == null) {
+        if (selectedTeamType == null) {
             admin.sendMessage(plugin.getMessage("gui.teamadmin.error.no-team-selected"));
             return;
         }
@@ -103,24 +103,23 @@ public class TeamAdminGUIListener implements Listener {
             return;
         }
 
-        // 관전자였던 플레이어를 다른 팀으로 옮길 경우 서바이벌 모드로 변경
-        if (selectedPlayer.getGameMode() == GameMode.SPECTATOR && selectedTeam != TeamType.SPECTATOR) {
-            selectedPlayer.setGameMode(GameMode.SURVIVAL);
-        }
-
-        if (selectedTeam == TeamType.RED || selectedTeam == TeamType.BLUE) {
-            teamManager.joinTeam(selectedPlayer, selectedTeam.getName());
-            admin.sendMessage(plugin.getMessage("gui.teamadmin.success.set-team", "%player%", selectedPlayer.getName(), "%team%", selectedTeam.getName()));
-            selectedPlayer.sendMessage(plugin.getMessage("gui.teamadmin.info.team-changed", "%admin%", admin.getName(), "%teamcolor%", selectedTeam.getColor().toString(), "%team%", selectedTeam.getName()));
-        } else {
+        // "없음"을 선택한 경우, 팀에서만 내보냅니다.
+        if (selectedTeamType == TeamType.NONE) {
             teamManager.leaveTeam(selectedPlayer);
-            if (selectedTeam == TeamType.SPECTATOR) {
-                selectedPlayer.setGameMode(GameMode.SPECTATOR);
-                admin.sendMessage(plugin.getMessage("gui.teamadmin.success.set-spectator", "%player%", selectedPlayer.getName()));
-                selectedPlayer.sendMessage(plugin.getMessage("gui.teamadmin.info.spectator-set", "%admin%", admin.getName()));
-            } else { // NONE
-                admin.sendMessage(plugin.getMessage("gui.teamadmin.success.set-no-team", "%player%", selectedPlayer.getName()));
-                selectedPlayer.sendMessage(plugin.getMessage("gui.teamadmin.info.removed-from-team", "%admin%", admin.getName()));
+            admin.sendMessage(plugin.getMessage("gui.teamadmin.success.set-no-team", "%player%", selectedPlayer.getName()));
+            selectedPlayer.sendMessage(plugin.getMessage("gui.teamadmin.info.removed-from-team", "%admin%", admin.getName()));
+        } else {
+            // RED, BLUE, SPECTATOR 팀을 선택한 경우, joinTeam을 호출합니다.
+            // joinTeam 메소드가 기존 팀 탈퇴, 게임모드 변경 등을 모두 알아서 처리합니다.
+            boolean success = teamManager.joinTeam(selectedPlayer, selectedTeamType.getName());
+            if (success) {
+                if (selectedTeamType == TeamType.SPECTATOR) {
+                    admin.sendMessage(plugin.getMessage("gui.teamadmin.success.set-spectator", "%player%", selectedPlayer.getName()));
+                    selectedPlayer.sendMessage(plugin.getMessage("gui.teamadmin.info.spectator-set", "%admin%", admin.getName()));
+                } else {
+                    admin.sendMessage(plugin.getMessage("gui.teamadmin.success.set-team", "%player%", selectedPlayer.getName(), "%team%", selectedTeamType.getName()));
+                    selectedPlayer.sendMessage(plugin.getMessage("gui.teamadmin.info.team-changed", "%admin%", admin.getName(), "%teamcolor%", selectedTeamType.getColor().toString(), "%team%", selectedTeamType.getName()));
+                }
             }
         }
     }

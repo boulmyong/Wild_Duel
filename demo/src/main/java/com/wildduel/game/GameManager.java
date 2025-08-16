@@ -178,7 +178,12 @@ public class GameManager {
             return;
         }
 
-        List<Player> participants = new ArrayList<>(lobbyWorld.getPlayers());
+        List<Player> allPlayers = new ArrayList<>(lobbyWorld.getPlayers());
+        // teamManager.isSpectator()를 사용하여 관전자를 제외한 참가자 목록을 생성합니다.
+        List<Player> participants = allPlayers.stream()
+                .filter(p -> !teamManager.isSpectator(p))
+                .toList();
+
         if (participants.size() < 2) {
             Bukkit.broadcastMessage(plugin.getMessage("error.not-enough-players"));
             return;
@@ -186,9 +191,10 @@ public class GameManager {
 
         // Determine game mode and validate teams
         if (this.gameMode == GameMode.TEAM) {
-            for (Player player : participants) {
+            for (Player player : participants) { // 필터링된 참가자 목록을 사용합니다.
                 if (teamManager.getPlayerTeam(player) == null) {
-                    Bukkit.broadcastMessage(plugin.getMessage("error.player-not-in-team"));
+                    // 플레이어 이름을 포함하도록 메시지 형식 변경을 권장합니다. 예: "%player%님은 팀에 속해있지 않습니다."
+                    Bukkit.broadcastMessage(plugin.getMessage("error.player-not-in-team", "%player%", player.getName()));
                     return;
                 }
             }

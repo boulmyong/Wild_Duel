@@ -2,6 +2,7 @@ package com.wildduel.game;
 
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
+import org.bukkit.GameMode;
 import org.bukkit.entity.Player;
 import org.bukkit.scoreboard.Scoreboard;
 import org.bukkit.scoreboard.ScoreboardManager;
@@ -12,6 +13,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class TeamManager {
 
+    public static final String SPECTATOR_TEAM_NAME = "Spectator"; // 관전자 팀 이름 상수
     private final Map<String, TeamData> teams = new ConcurrentHashMap<>();
     private final Map<UUID, String> playerTeams = new ConcurrentHashMap<>();
     private final Scoreboard scoreboard;
@@ -29,6 +31,7 @@ public class TeamManager {
         // Ensure teams are created on the main scoreboard
         createTeam("Red", ChatColor.RED);
         createTeam("Blue", ChatColor.BLUE);
+        createTeam(SPECTATOR_TEAM_NAME, ChatColor.GRAY); // 관전자 팀 추가
     }
 
     public void createTeam(String name, ChatColor color) {
@@ -55,6 +58,16 @@ public class TeamManager {
 
         updatePlayerScoreboard(player, teamData);
         player.sendMessage(teamData.getColor() + "당신은 " + teamData.getName() + " 팀에 합류했습니다.");
+
+        // 관전자 팀에 합류하면 게임 모드 변경
+        if (teamName.equals(SPECTATOR_TEAM_NAME)) {
+            player.setGameMode(GameMode.SPECTATOR);
+        } else {
+            // 다른 팀에 합류할 때, 만약 관전자였다면 게임 모드를 ADVENTURE로 변경
+            if (player.getGameMode() == GameMode.SPECTATOR) {
+                player.setGameMode(GameMode.ADVENTURE);
+            }
+        }
         return true;
     }
 
@@ -65,6 +78,11 @@ public class TeamManager {
                 teams.get(teamName).getPlayers().remove(player);
             }
             removePlayerFromScoreboardTeam(player);
+
+            // 팀을 떠날 때, 만약 관전자였다면 게임 모드를 ADVENTURE로 변경
+            if (player.getGameMode() == GameMode.SPECTATOR) {
+                player.setGameMode(GameMode.ADVENTURE);
+            }
         }
     }
 
@@ -72,15 +90,30 @@ public class TeamManager {
         return playerTeams.get(player.getUniqueId());
     }
 
+    // 새로운 isSpectator 메소드
+    public boolean isSpectator(Player player) {
+        String teamName = getPlayerTeam(player);
+        return teamName != null && teamName.equals(SPECTATOR_TEAM_NAME);
+    }
+
     public void assignRandomTeams() {
         leaveAllTeams();
         List<Player> onlinePlayers = new ArrayList<>(Bukkit.getOnlinePlayers());
         Collections.shuffle(onlinePlayers);
 
+        // 관전자 팀을 제외한 팀 목록 가져오기
         List<String> teamNames = new ArrayList<>(teams.keySet());
+        teamNames.remove(SPECTATOR_TEAM_NAME);
+
+        if (teamNames.isEmpty()) return; // Assignable teams don't exist
+
         int teamIndex = 0;
 
         for (Player player : onlinePlayers) {
+            // 이미 관전자 팀인 플레이어는 무작위 팀 배정에서 제외
+            if (isSpectator(player)) {
+                continue;
+            }
             String teamName = teamNames.get(teamIndex);
             joinTeam(player, teamName);
             teamIndex = (teamIndex + 1) % teamNames.size();

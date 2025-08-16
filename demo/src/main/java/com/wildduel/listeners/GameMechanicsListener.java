@@ -46,7 +46,7 @@ public class GameMechanicsListener implements Listener {
             if (smeltMap.containsKey(blockType)) {
                 event.setDropItems(false);
                 Material smeltedItem = smeltMap.get(blockType);
-                event.getBlock().getWorld().dropItemNaturally(event.getBlock().getLocation(), new ItemStack(smeltedItem, 1));
+                event.getBlock().getWorld().dropItem(event.getBlock().getLocation().add(0.5, 0.5, 0.5), new ItemStack(smeltedItem, 1));
             }
         }
     }
